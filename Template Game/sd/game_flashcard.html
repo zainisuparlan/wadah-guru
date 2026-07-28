@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jelajah Kartu Ajaib</title>
+    <style>
+        :root {
+            --bg-color: #f3e5f5;
+            --primary-color: #ab47bc;
+        }
+        body {
+            font-family: 'Comic Sans MS', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .header-info {
+            background: rgba(255,255,255,0.7);
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #6a1b9a;
+            margin-bottom: 10px;
+            font-weight: bold;
+            border: 2px solid #e1bee7;
+        }
+        h2 { color: #6a1b9a; margin: 5px 0; }
+        .instructions { color: #8e24aa; font-size: 1.1rem; margin-bottom: 25px; }
+        
+        .flashcard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 20px;
+            max-width: 800px;
+            width: 100%;
+            padding: 10px;
+        }
+        .card-container {
+            height: 220px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+            border-radius: 20px;
+        }
+        .card-container.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 20px;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        .card-front {
+            background-color: #ffffff;
+            color: #333;
+            border: 4px solid #ce93d8;
+        }
+        .card-back {
+            background-color: #ba68c8;
+            color: white;
+            transform: rotateY(180deg);
+            border: 4px solid #aa00ff;
+        }
+        .emoji-icon {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+        }
+        .card-text {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; max-width:800px; width:100%; margin-bottom:10px;">
+        <div class="header-info" id="teacherBadge" style="margin-bottom:0;">Guru: SD | Kelas: -</div>
+        <button class="btn-mute" id="btnMute" onclick="toggleMute()" style="background:#fff; border:1.5px solid #ab47bc; color:#ab47bc; padding:4px 12px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:0.8rem;">🔊 Suara: On</button>
+    </div>
+    <h2 id="gameTitle">✨ Jelajah Kartu Ajaib ✨</h2>
+    <div class="instructions">Klik kartu untuk melihat rahasianya!</div>
+
+    <div class="flashcard-grid" id="cardBox">
+        <!-- Kartu diisi otomatis via JS -->
+    </div>
+
+<script>
+    const dataGame = {{DATA_GAME_JSON}} || {
+        "judul": "Jelajah Kartu Ajaib",
+        "nama_guru": "Ibu Guru",
+        "wali_kelas": "Wali Kelas",
+        "kelas": "SD",
+        "koleksi_kartu": [
+            {"emoji": "🐱", "depan": "Kucing", "belakang": "Cat 🇬🇧"},
+            {"emoji": "🐶", "depan": "Anjing", "belakang": "Dog 🇬🇧"},
+            {"emoji": "🍎", "depan": "Apel", "belakang": "Apple 🇬🇧"},
+            {"emoji": "🚗", "depan": "Mobil", "belakang": "Car 🇬🇧"}
+        ]
+    };
+
+    let _idVoice = null;
+    function loadVoice() {
+        if (!('speechSynthesis' in window)) return;
+        const voices = window.speechSynthesis.getVoices();
+        _idVoice = voices.find(v => (v.lang && v.lang.toLowerCase().startsWith('id')) || (v.name && v.name.toLowerCase().includes('indonesia'))) || null;
+    }
+    if ('speechSynthesis' in window) {
+        loadVoice();
+        window.speechSynthesis.onvoiceschanged = loadVoice;
+    }
+
+    let isMuted = localStorage.getItem('wg_sound_muted') === 'true';
+
+    function updateMuteBtn() {
+        const btn = document.getElementById('btnMute');
+        if (btn) {
+            btn.innerHTML = isMuted ? '🔇 Suara: Off' : '🔊 Suara: On';
+            btn.style.background = isMuted ? '#ffebee' : '#fff';
+            btn.style.color = isMuted ? '#c62828' : '#ab47bc';
+            btn.style.borderColor = isMuted ? '#ef9a9a' : '#ab47bc';
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        localStorage.setItem('wg_sound_muted', isMuted);
+        updateMuteBtn();
+        if (isMuted && window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    function bacaTeks(teks) {
+        if (isMuted || !teks) return;
+        let cleanText = teks.replace(/🇬🇧|🇺🇸|✨|🎉|❌|💖/g, '').trim();
+        let url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=id&q=" + encodeURIComponent(cleanText);
+        let audio = new Audio(url);
+        audio.play().catch(() => {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            let u = new SpeechSynthesisUtterance(cleanText);
+            u.lang = 'id-ID';
+            if (_idVoice) u.voice = _idVoice;
+            u.rate = 0.85;
+            window.speechSynthesis.speak(u);
+        });
+    }
+
+    function buildCards() {
+        updateMuteBtn();
+        if(dataGame.judul) document.getElementById('gameTitle').innerText = '✨ ' + dataGame.judul + ' ✨';
+        if(dataGame.nama_guru || dataGame.kelas) {
+            document.getElementById('teacherBadge').innerText = `👩‍🏫 Guru: ${dataGame.nama_guru || '-'} | 📚 ${dataGame.kelas || '-'} (Wali Kelas: ${dataGame.wali_kelas || '-'})`;
+        }
+
+        const box = document.getElementById('cardBox');
+        box.innerHTML = "";
+
+        dataGame.koleksi_kartu.forEach(item => {
+            const container = document.createElement('div');
+            container.className = 'card-container';
+            container.onclick = (e) => {
+                const isFlipped = container.classList.toggle('flipped');
+                bacaTeks(isFlipped ? item.belakang : item.depan);
+            };
+
+            let optionsHtml = '';
+            if (item.pilihan && Array.isArray(item.pilihan) && item.pilihan.length > 0) {
+                optionsHtml = `<div style="font-size:0.85rem; font-weight:600; margin-top:8px; text-align:left; color:#444;">${item.pilihan.join('<br>')}</div>`;
+            }
+
+            container.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-front">
+                        <div class="emoji-icon">${item.emoji || '🌟'}</div>
+                        <div class="card-text">${item.depan}</div>
+                        ${optionsHtml}
+                        <span style="font-size:0.75rem; margin-top:6px; color:#888;">🔊 Klik untuk suara</span>
+                    </div>
+                    <div class="card-back">
+                        <div class="emoji-icon">🌟</div>
+                        <div class="card-text">${item.belakang}</div>
+                        <span style="font-size:0.75rem; margin-top:6px; color:rgba(255,255,255,0.8);">🔊 Dibacakan</span>
+                    </div>
+                </div>
+            `;
+            box.appendChild(container);
+        });
+    }
+
+    buildCards();
+</script>
+
+</body>
+</html>

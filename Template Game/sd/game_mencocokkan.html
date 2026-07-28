@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hubungkan Pasangan Serasi</title>
+    <style>
+        body { font-family: 'Comic Sans MS', sans-serif; background-color: #fff3e0; text-align: center; margin: 0; padding: 20px; }
+        .game-container { background: white; max-width: 550px; margin: auto; padding: 20px; border-radius: 25px; border: 5px solid #ffb74d; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .header-info { background: #fff3e0; padding: 6px 14px; border-radius: 15px; font-size: 0.85rem; color: #e65100; margin-bottom: 15px; font-weight: bold; }
+        .match-row { display: flex; justify-content: space-between; margin: 15px 0; }
+        .item-box { background: #fff8e1; border: 3px solid #ffe082; padding: 15px; width: 45%; font-size: 1.1rem; font-weight: bold; border-radius: 15px; cursor: pointer; transition: 0.2s; box-sizing: border-box; }
+        .item-box.selected { background: #ffcc80; border-color: #f57c00; }
+        .item-box.matched { background: #c8e6c9; border-color: #4caf50; cursor: default; pointer-events: none; }
+        .feedback-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center; }
+        .feedback-overlay.show { display:flex; }
+        .feedback-card { background:#fff; border-radius:32px; padding:36px 40px 28px; text-align:center; max-width:320px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.25); animation: popIn .3s cubic-bezier(.34,1.56,.64,1); }
+        .feedback-emoji { font-size:5rem; line-height:1; margin-bottom:12px; display:block; animation: bounce 0.5s ease infinite alternate; }
+        .feedback-msg { font-size:1.35rem; font-weight:900; margin-bottom:6px; }
+        .feedback-sub { font-size:0.95rem; color:#777; margin-bottom:20px; }
+        .feedback-btn { border:none; padding:12px 36px; border-radius:50px; font-size:1rem; font-weight:800; cursor:pointer; color:#fff; background:linear-gradient(135deg,#f093fb,#f5576c); }
+        @keyframes popIn  { from{transform:scale(.5);opacity:0} to{transform:scale(1);opacity:1} }
+        @keyframes bounce { from{transform:translateY(0)} to{transform:translateY(-10px)} }
+    </style>
+</head>
+<body>
+
+<div class="game-container" id="gameScreen">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div class="header-info" id="teacherBadge" style="margin-bottom:0;">Guru: - | Kelas: -</div>
+        <button class="btn-mute" id="btnMute" onclick="toggleMute()" style="background:#fff3e0; border:1.5px solid #ffb74d; color:#e65100; padding:4px 12px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:0.8rem;">🔊 Suara: On</button>
+    </div>
+    <h2 id="gameTitle">🤝 Pasangan Serasi 🤝</h2>
+    <p style="color: #e65100;">Klik benda di kiri, lalu klik pasangannya di sebelah kanan!</p>
+    
+    <div id="gameFields"></div>
+</div>
+
+<div class="feedback-overlay" id="feedbackOverlay">
+  <div class="feedback-card">
+    <span class="feedback-emoji" id="feedbackEmoji">😢</span>
+    <div class="feedback-msg" id="feedbackMsg">Ups, Belum Cocok!</div>
+    <div class="feedback-sub" id="feedbackSub">Coba lagi ya!</div>
+    <button class="feedback-btn" id="feedbackBtn" onclick="closeFeedback()">Coba Lagi 🔄</button>
+  </div>
+</div>
+
+<script>
+    const dataGame = {{DATA_GAME_JSON}} || {
+        "judul": "Pasangan Serasi",
+        "nama_guru": "Ibu Guru",
+        "wali_kelas": "Wali Kelas",
+        "kelas": "SD",
+        "pasangan": [
+            {"id": 1, "kiri": "☀️ Matahari", "kanan": "Siang Hari"},
+            {"id": 2, "kiri": "🌙 Bulan", "kanan": "Malam Hari"},
+            {"id": 3, "kiri": "🌧️ Hujan", "kanan": "Payung"}
+        ]
+    };
+
+    let selectedLeft = null;
+    let totalMatched = 0;
+
+    function initHeader() {
+        if(dataGame.judul) document.getElementById('gameTitle').innerText = '🤝 ' + dataGame.judul + ' 🤝';
+        if(dataGame.nama_guru || dataGame.kelas) {
+            document.getElementById('teacherBadge').innerText = `👩‍🏫 Guru: ${dataGame.nama_guru || '-'} | 📚 ${dataGame.kelas || '-'} (Wali Kelas: ${dataGame.wali_kelas || '-'})`;
+        }
+        updateMuteBtn();
+    }
+
+    function initGame() {
+        initHeader();
+        const fields = document.getElementById('gameFields');
+        let kananAcak = [...dataGame.pasangan].sort(() => Math.random() - 0.5);
+
+        for(let i=0; i < dataGame.pasangan.length; i++) {
+            let row = document.createElement('div');
+            row.className = 'match-row';
+            
+            row.innerHTML = `
+                <div class="item-box left-item" id="L-${dataGame.pasangan[i].id}" onclick="selectLeft(${dataGame.pasangan[i].id})">${dataGame.pasangan[i].kiri}</div>
+                <div class="item-box right-item" id="R-${kananAcak[i].id}" onclick="selectRight(${kananAcak[i].id})">${kananAcak[i].kanan}</div>
+            `;
+            fields.appendChild(row);
+        }
+    }
+
+    let _idVoice = null;
+    function loadVoice() {
+        if (!('speechSynthesis' in window)) return;
+        const voices = window.speechSynthesis.getVoices();
+        _idVoice = voices.find(v => (v.lang && v.lang.toLowerCase().startsWith('id')) || (v.name && v.name.toLowerCase().includes('indonesia'))) || null;
+    }
+    if ('speechSynthesis' in window) {
+        loadVoice();
+        window.speechSynthesis.onvoiceschanged = loadVoice;
+    }
+
+    let isMuted = localStorage.getItem('wg_sound_muted') === 'true';
+
+    function updateMuteBtn() {
+        const btn = document.getElementById('btnMute');
+        if (btn) {
+            btn.innerHTML = isMuted ? '🔇 Suara: Off' : '🔊 Suara: On';
+            btn.style.background = isMuted ? '#ffebee' : '#fff3e0';
+            btn.style.color = isMuted ? '#c62828' : '#e65100';
+            btn.style.borderColor = isMuted ? '#ef9a9a' : '#ffb74d';
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        localStorage.setItem('wg_sound_muted', isMuted);
+        updateMuteBtn();
+        if (isMuted && window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    function bacaTeks(teks) {
+        if (isMuted || !teks) return;
+        let cleanText = teks.replace(/☀️|🌙|🌧️|✨|🎉|❌|💖/g, '').trim();
+        let url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=id&q=" + encodeURIComponent(cleanText);
+        let audio = new Audio(url);
+        audio.play().catch(() => {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            let u = new SpeechSynthesisUtterance(cleanText);
+            u.lang = 'id-ID';
+            if (_idVoice) u.voice = _idVoice;
+            u.rate = 0.85;
+            window.speechSynthesis.speak(u);
+        });
+    }
+
+    function selectLeft(id) {
+        document.querySelectorAll('.left-item').forEach(b => b.classList.remove('selected'));
+        selectedLeft = id;
+        const itemObj = dataGame.pasangan.find(p => p.id === id);
+        if (itemObj) bacaTeks(itemObj.kiri);
+        document.getElementById(`L-${id}`).classList.add('selected');
+    }
+
+    function selectRight(id) {
+        if(selectedLeft === null) return;
+        
+        if(selectedLeft === id) {
+            document.getElementById(`L-${id}`).className = 'item-box matched';
+            document.getElementById(`R-${id}`).className = 'item-box matched';
+            totalMatched++;
+            selectedLeft = null;
+            if(totalMatched === dataGame.pasangan.length) {
+                setTimeout(() => {
+                    document.getElementById('gameScreen').innerHTML = "<h2 style='color:#4caf50;'>🎉 LUAR BIASA! 🎉</h2><p style='font-size:1.2rem;'>Semua pasangan berhasil dihubungkan dengan tepat!</p>";
+                }, 800);
+            }
+        } else {
+            showFeedback(false, function(){
+                document.querySelectorAll('.left-item').forEach(b => b.classList.remove('selected'));
+                selectedLeft = null;
+            });
+        }
+    }
+
+    let _cb = null;
+    function showFeedback(isCorrect, callback) {
+        _cb = callback || null;
+        const ov = document.getElementById('feedbackOverlay');
+        document.getElementById('feedbackEmoji').textContent = isCorrect
+            ? ['🎉','⭐','🌟','🏆','🥳'][Math.floor(Math.random()*5)]
+            : ['😢','😅','🙈','😬','💪'][Math.floor(Math.random()*5)];
+        document.getElementById('feedbackMsg').textContent  = isCorrect ? 'Horee! Cocok! 🎊' : 'Ups, Belum Cocok...';
+        document.getElementById('feedbackSub').textContent  = isCorrect ? 'Pasangannya tepat! Hebat!' : 'Jangan menyerah! Coba lagi! 💪';
+        document.getElementById('feedbackBtn').textContent  = isCorrect ? 'Lanjut ➡️' : 'Coba Lagi 🔄';
+        document.getElementById('feedbackBtn').style.background = isCorrect ? 'linear-gradient(135deg,#43e97b,#38f9d7)' : 'linear-gradient(135deg,#f093fb,#f5576c)';
+        ov.classList.add('show');
+    }
+    function closeFeedback() {
+        document.getElementById('feedbackOverlay').classList.remove('show');
+        if (_cb) { _cb(); _cb = null; }
+    }
+
+    initGame();
+</script>
+</body>
+</html>

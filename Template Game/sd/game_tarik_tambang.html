@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Tarik Tambang Matematika</title>
+    <style>
+        :root {
+            --bg-color: #f0f4c3;
+            --blue-team: #2196f3;
+            --red-team: #f44336;
+        }
+        body {
+            font-family: 'Comic Sans MS', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .game-container {
+            background-color: #ffffff;
+            border-radius: 25px;
+            padding: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            max-width: 650px;
+            width: 100%;
+            text-align: center;
+            border: 5px solid #d4e157;
+        }
+        .header-info {
+            background: #f0f4c3;
+            padding: 6px 14px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            color: #33691e;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .rope-area {
+            position: relative;
+            height: 120px;
+            background-color: #e8f5e9;
+            border-radius: 15px;
+            margin: 20px 0;
+            overflow: hidden;
+            border: 3px dashed #81c784;
+        }
+        .rope {
+            position: absolute;
+            top: 55px;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background-color: #795548;
+        }
+        .flag {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            width: 20px;
+            height: 40px;
+            background-color: #ffeb3b;
+            border: 2px solid #ff9800;
+            transform: translateX(-50%);
+            transition: left 0.5s ease;
+        }
+        .team-label {
+            position: absolute;
+            top: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .player-team { left: 20px; color: var(--blue-team); }
+        .enemy-team { right: 20px; color: var(--red-team); }
+
+        .question-box {
+            font-size: 1.8rem;
+            margin: 20px 0;
+            font-weight: bold;
+            color: #333;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .option-btn {
+            background-color: #f9f9f9;
+            border: 3px solid #d4e157;
+            border-radius: 15px;
+            padding: 15px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+        .option-btn:hover {
+            background-color: #f0f4c3;
+            transform: scale(1.03);
+        }
+        .feedback {
+            margin-top: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            height: 25px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container" id="gameScreen">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div class="header-info" id="teacherBadge" style="margin-bottom:0;">Guru: - | Kelas: -</div>
+        <button class="btn-mute" id="btnMute" onclick="toggleMute()" style="background:#f0f4c3; border:1.5px solid #afb42b; color:#827717; padding:4px 12px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:0.8rem;">🔊 Suara: On</button>
+    </div>
+    <h2 id="gameTitle">🪢 Laga Tarik Tambang 🪢</h2>
+    
+    <div class="rope-area">
+        <div class="team-label player-team">Kamu (Tim Biru)</div>
+        <div class="team-label enemy-team">Lawan (Tim Merah)</div>
+        <div class="rope"></div>
+        <div class="flag" id="ropeFlag"></div>
+    </div>
+
+    <div class="question-box" id="questionText">0 + 0</div>
+    <button onclick="bacaSoal()" style="background:#e8f5e9; border:2px solid #66bb6a; color:#2e7d32; padding:5px 16px; border-radius:50px; font-weight:bold; cursor:pointer; margin-bottom:15px; font-size:0.9rem;">🔊 Dengar Soal</button>
+    
+    <div class="options-grid" id="optionsContainer">
+        <!-- Pilihan jawaban diisi via JS -->
+    </div>
+    
+    <div class="feedback" id="feedbackText"></div>
+</div>
+
+<script>
+    const dataGame = {{DATA_GAME_JSON}} || {
+        "judul": "Laga Tarik Tambang",
+        "nama_guru": "Ibu Guru",
+        "wali_kelas": "Wali Kelas",
+        "kelas": "SD",
+        "soal_matematika": [
+            {"soal": "5 + 3 = ...", "pilihan": ["6", "7", "8", "9"], "jawaban": "8"},
+            {"soal": "10 - 4 = ...", "pilihan": ["4", "5", "6", "7"], "jawaban": "6"}
+        ]
+    };
+
+    let currentIndex = 0;
+    let flagPosition = 50;
+
+    function initHeader() {
+        if(dataGame.judul) document.getElementById('gameTitle').innerText = '🪢 ' + dataGame.judul + ' 🪢';
+        if(dataGame.nama_guru || dataGame.kelas) {
+            document.getElementById('teacherBadge').innerText = `👩‍🏫 Guru: ${dataGame.nama_guru || '-'} | 📚 ${dataGame.kelas || '-'} (Wali Kelas: ${dataGame.wali_kelas || '-'})`;
+        }
+        updateMuteBtn();
+    }
+
+    let _idVoice = null;
+    function loadVoice() {
+        if (!('speechSynthesis' in window)) return;
+        const voices = window.speechSynthesis.getVoices();
+        _idVoice = voices.find(v => (v.lang && v.lang.toLowerCase().startsWith('id')) || (v.name && v.name.toLowerCase().includes('indonesia'))) || null;
+    }
+    if ('speechSynthesis' in window) {
+        loadVoice();
+        window.speechSynthesis.onvoiceschanged = loadVoice;
+    }
+
+    let isMuted = localStorage.getItem('wg_sound_muted') === 'true';
+
+    function updateMuteBtn() {
+        const btn = document.getElementById('btnMute');
+        if (btn) {
+            btn.innerHTML = isMuted ? '🔇 Suara: Off' : '🔊 Suara: On';
+            btn.style.background = isMuted ? '#ffebee' : '#f0f4c3';
+            btn.style.color = isMuted ? '#c62828' : '#827717';
+            btn.style.borderColor = isMuted ? '#ef9a9a' : '#afb42b';
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        localStorage.setItem('wg_sound_muted', isMuted);
+        updateMuteBtn();
+        if (isMuted && window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    function bacaSoal() {
+        if (isMuted || !dataGame.soal_matematika || !dataGame.soal_matematika[currentIndex]) return;
+        let teks = dataGame.soal_matematika[currentIndex].soal;
+        let url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=id&q=" + encodeURIComponent(teks);
+        let audio = new Audio(url);
+        audio.play().catch(() => {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            let u = new SpeechSynthesisUtterance(teks);
+            u.lang = 'id-ID';
+            if (_idVoice) u.voice = _idVoice;
+            u.rate = 0.85;
+            window.speechSynthesis.speak(u);
+        });
+    }
+
+    function loadQuestion() {
+        if (flagPosition >= 80) {
+            showEndScreen("🎉 KAMU MENANG! 🎉", "#2196f3");
+            return;
+        } else if (flagPosition <= 20) {
+            showEndScreen("❌ KAMU KALAH! ❌", "#f44336");
+            return;
+        }
+
+        if (currentIndex >= dataGame.soal_matematika.length) {
+            if (flagPosition > 50) {
+                showEndScreen("🎉 KAMU MENANG! 🎉", "#2196f3");
+            } else if (flagPosition < 50) {
+                showEndScreen("❌ KAMU KALAH! ❌", "#f44336");
+            } else {
+                showEndScreen("🤝 HASIL SERI! 🤝", "#ff9800");
+            }
+            return;
+        }
+
+        const currentData = dataGame.soal_matematika[currentIndex];
+        document.getElementById('questionText').innerText = currentData.soal;
+        document.getElementById('feedbackText').innerText = "";
+        
+        const container = document.getElementById('optionsContainer');
+        container.innerHTML = "";
+
+        currentData.pilihan.forEach(option => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = option;
+            btn.onclick = () => checkAnswer(option);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selectedAnswer) {
+        const correctAnswer = dataGame.soal_matematika[currentIndex].jawaban;
+        const feedback = document.getElementById('feedbackText');
+        const flag = document.getElementById('ropeFlag');
+
+        if (selectedAnswer === correctAnswer) {
+            feedback.innerHTML = "<span style='color: #4caf50;'>💪 Benar! Kamu menarik tali!</span>";
+            flagPosition -= 12;
+        } else {
+            feedback.innerHTML = "<span style='color: #f44336;'>💥 Salah! Lawan menarikmu!</span>";
+            flagPosition += 12;
+        }
+
+        flag.style.left = flagPosition + "%";
+
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(b => b.disabled = true);
+
+        setTimeout(() => {
+            currentIndex++;
+            loadQuestion();
+        }, 1500);
+    }
+
+    function showEndScreen(message, color) {
+        document.getElementById('gameScreen').innerHTML = `
+            <h2 style="color: ${color}; font-size: 2rem;">${message}</h2>
+            <p style="font-size: 1.2rem;">Permainan selesai. Terima kasih sudah mencoba!</p>
+            <button onclick="location.reload()" style="padding: 12px 25px; font-size: 1.1rem; border-radius: 10px; border: none; background-color: ${color}; color: white; cursor: pointer;">Main Lagi</button>
+        `;
+    }
+
+    initHeader();
+    loadQuestion();
+</script>
+
+</body>
+</html>

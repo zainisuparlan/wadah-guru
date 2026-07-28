@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <!-- ═══ INFO GAME ═══ -->
+  <meta name="game-creator" content="ajis">
+  <meta name="game-class" content="kelas 3">
+  <meta name="game-homeroom" content="nonik">
+  <meta name="generator" content="Wadah Guru AI - by Zaini Suparlan">
+  <!-- ════════════════ -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tebak Isian Singkat</title>
+    <style>
+        body { font-family: 'Comic Sans MS', sans-serif; background-color: #e0f2f1; text-align: center; margin: 0; padding: 20px; }
+        .game-container { background: white; max-width: 520px; margin: auto; padding: 30px; border-radius: 25px; border: 5px solid #4db6ac; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .header-info { background: #e0f2f1; padding: 6px 14px; border-radius: 15px; font-size: 0.85rem; color: #004d40; margin-bottom: 15px; font-weight: bold; }
+        .soal-box { font-size: 1.4rem; margin: 20px 0; font-weight: bold; color: #004d40; line-height: 1.5; }
+        .input-box { font-family: inherit; font-size: 1.4rem; padding: 10px; width: 70%; text-align: center; border: 3px solid #b2dfdb; border-radius: 12px; margin-bottom: 20px; outline: none; }
+        .input-box:focus { border-color: #4db6ac; }
+        .btn-submit { background: #4db6ac; color: white; border: none; padding: 12px 30px; font-size: 1.1rem; border-radius: 12px; cursor: pointer; font-weight: bold; }
+        .btn-submit:hover { background: #00796b; }
+    </style>
+
+<style id="watermark-style-zaini">
+  #watermark-zaini-suparlan {
+    position: fixed !important;
+    bottom: 10px !important;
+    right: 15px !important;
+    z-index: 99999 !important;
+    font-family: 'Segoe UI', Arial, sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: rgba(80, 80, 80, 0.65) !important;
+    letter-spacing: 0.5px !important;
+    pointer-events: none !important;
+    user-select: none !important;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.8) !important;
+    border-top: 1px solid rgba(120,120,120,0.2) !important;
+    padding-top: 4px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    background: rgba(255,255,255,0.4) !important;
+    border-radius: 6px 6px 0 0 !important;
+    backdrop-filter: blur(4px) !important;
+  }
+</style>
+
+</head>
+<body>
+
+<div class="game-container" id="gameScreen">
+    <div class="header-info" id="teacherBadge">Guru: - | Kelas: -</div>
+    <h2 id="gameTitle">✏️ Isi Kotak Kosong ✏️</h2>
+    <div class="soal-box" id="soalText">Memuat soal...</div>
+    
+    <input type="text" class="input-box" id="answerInput" placeholder="Ketik jawabanmu..." autocomplete="off">
+    <br>
+    <button class="btn-submit" onclick="checkAnswer()">Kirim Jawaban</button>
+</div>
+
+<script>
+    const dataGame = {
+  "judul": "Petualangan Hutan: Hitungan Cepat Kelas 3",
+  "nama_guru": "ajis",
+  "wali_kelas": "nonik",
+  "kelas": "kelas 3",
+  "soal_list": [
+    {
+      "pertanyaan": "Berapa hasil dari 2 + 2...",
+      "jawaban": "4"
+    },
+    {
+      "pertanyaan": "Siapa yang memiliki 5 buku dan memberikan 1 buku kepada temannya? Berapa buku yang masih dimiliki...",
+      "jawaban": "4"
+    },
+    {
+      "pertanyaan": "Sebuah keranjang berisi 8 apel. Jika 2 apel diambil, berapa apel yang tersisa...",
+      "jawaban": "6"
+    },
+    {
+      "pertanyaan": "Andi memiliki 12 pensil. Ia memberikan 4 pensil kepada adiknya. Berapa pensil yang masih dimiliki Andi...",
+      "jawaban": "8"
+    },
+    {
+      "pertanyaan": "Sebuah botol berisi 15 kapsul. Jika 3 kapsul digunakan, berapa kapsul yang tersisa...",
+      "jawaban": "12"
+    },
+    {
+      "pertanyaan": "Berapa hasil dari 5 - 1...",
+      "jawaban": "4"
+    },
+    {
+      "pertanyaan": "Jika sebuah mobil memiliki 16 roda dan 4 roda diganti, berapa roda yang masih asli...",
+      "jawaban": "12"
+    },
+    {
+      "pertanyaan": "Sebuah kantong berisi 20 koin. Jika 4 koin diambil, berapa koin yang tersisa...",
+      "jawaban": "16"
+    },
+    {
+      "pertanyaan": "Berapa hasil dari 3 x 3...",
+      "jawaban": "9"
+    },
+    {
+      "pertanyaan": "Sebuah tas berisi 18 buku. Jika 2 buku diambil, berapa buku yang tersisa...",
+      "jawaban": "16"
+    }
+  ]
+} || {
+        "judul": "Isi Kotak Kosong",
+        "nama_guru": "Ibu Guru",
+        "wali_kelas": "Wali Kelas",
+        "kelas": "SD",
+        "soal_list": [
+            {"pertanyaan": "Ibu kota negara Indonesia adalah ...", "jawaban": "jakarta"},
+            {"pertanyaan": "Hewan berbelalai panjang adalah ...", "jawaban": "gajah"}
+        ]
+    };
+
+    let currentIndex = 0;
+
+    function initHeader() {
+        if(dataGame.judul) document.getElementById('gameTitle').innerText = '✏️ ' + dataGame.judul + ' ✏️';
+        if(dataGame.nama_guru || dataGame.kelas) {
+            document.getElementById('teacherBadge').innerText = `👩‍🏫 Guru: ${dataGame.nama_guru || '-'} | 📚 ${dataGame.kelas || '-'} (Wali Kelas: ${dataGame.wali_kelas || '-'})`;
+        }
+    }
+
+    function loadQuestion() {
+        if(currentIndex >= dataGame.soal_list.length) {
+            document.getElementById('gameScreen').innerHTML = "<h2 style='color:#4caf50;'>🎉 SELAMAT! 🎉</h2><p style='font-size:1.2rem;'>Kamu sukses menjawab semua tantangan kotak kosong!</p>";
+            return;
+        }
+        document.getElementById('soalText').innerText = dataGame.soal_list[currentIndex].pertanyaan;
+        document.getElementById('answerInput').value = "";
+    }
+
+    function checkAnswer() {
+        let uAns = document.getElementById('answerInput').value.trim().toLowerCase();
+        let cAns = dataGame.soal_list[currentIndex].jawaban.toLowerCase();
+
+        if (uAns === cAns) {
+            alert("✅ Hebat! Jawabanmu 100% Benar!");
+            currentIndex++;
+            loadQuestion();
+        } else {
+            alert("❌ Ups! Masih kurang tepat, coba periksa ketikannya lagi ya.");
+        }
+    }
+
+    initHeader();
+    loadQuestion();
+</script>
+
+<!-- ═══ WATERMARK HAK CIPTA — JANGAN HAPUS ═══ -->
+<div id="watermark-zaini-suparlan">✦ by ZAINI SUPARLAN</div>
+<!-- ═══════════════════════════════════════════ -->
+
+</body>
+</html>

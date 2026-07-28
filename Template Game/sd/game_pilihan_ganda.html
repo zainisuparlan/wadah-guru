@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Pilihan Ganda Seru</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', 'Nunito', Arial, sans-serif;
+            background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 50%, #e8eaf6 100%);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+        .game-container {
+            background: #ffffff;
+            border-radius: 28px;
+            padding: 28px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+            max-width: 640px;
+            width: 100%;
+            text-align: center;
+            border: 4px solid #b2ebf2;
+        }
+        .header-info {
+            background: #e0f7fa;
+            padding: 6px 14px;
+            border-radius: 15px;
+            font-size: 0.82rem;
+            color: #00796b;
+            font-weight: bold;
+        }
+        h2 { color: #0288d1; font-size: 1.4rem; margin: 10px 0 6px; }
+
+        /* ── Progress Bar ── */
+        .progress-wrap { background: #e0f2f1; border-radius: 50px; height: 10px; margin: 10px 0; overflow: hidden; }
+        .progress-bar  { background: linear-gradient(90deg,#26c6da,#0288d1); height: 100%; border-radius: 50px; transition: width .4s ease; }
+
+        /* ── Nomor soal & skor ── */
+        .stats-row { display:flex; justify-content:space-between; font-size:0.88rem; color:#555; margin-bottom:12px; }
+
+        /* ── Kotak Soal ── */
+        .soal-box {
+            background: #e0f7fa;
+            border: 2px dashed #4dd0e1;
+            border-radius: 18px;
+            padding: 16px 18px;
+            font-size: 1.18rem;
+            font-weight: 700;
+            color: #006064;
+            margin: 12px 0;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .btn-dengar {
+            background: #e0f2f1; border: 2px solid #4db6ac; color: #00796b;
+            padding: 5px 16px; border-radius: 50px; font-weight: bold;
+            cursor: pointer; margin-bottom: 12px; font-size: 0.88rem;
+        }
+        .btn-dengar:hover { background: #b2dfdb; }
+
+        /* ── Pilihan A B C D ── */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 6px 0 16px;
+        }
+        .option-btn {
+            background: #f0f9ff;
+            border: 3px solid #b2ebf2;
+            border-radius: 16px;
+            padding: 14px 10px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            font-family: inherit;
+            color: #01579b;
+            text-align: left;
+        }
+        .option-btn:hover  { background: #e0f7fa; border-color: #26c6da; transform: scale(1.03); }
+        .option-btn.correct { background: #e8f5e9; border-color: #43e97b; color: #1b5e20; }
+        .option-btn.wrong   { background: #ffebee; border-color: #f5576c; color: #b71c1c; }
+        .option-btn:disabled { cursor: default; }
+
+        /* ── Feedback Panel Emoji ── */
+        .feedback-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center; }
+        .feedback-overlay.show { display:flex; }
+        .feedback-card { background:#fff; border-radius:32px; padding:36px 40px 28px; text-align:center; max-width:320px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.25); animation: popIn .3s cubic-bezier(.34,1.56,.64,1); }
+        .feedback-emoji { font-size:5rem; line-height:1; margin-bottom:12px; display:block; animation: bounce 0.5s ease infinite alternate; }
+        .feedback-msg   { font-size:1.35rem; font-weight:900; margin-bottom:6px; }
+        .feedback-sub   { font-size:0.95rem; color:#777; margin-bottom:20px; }
+        .feedback-btn   { border:none; padding:12px 36px; border-radius:50px; font-size:1rem; font-weight:800; cursor:pointer; color:#fff; }
+        .feedback-btn.correct { background:linear-gradient(135deg,#43e97b,#38f9d7); }
+        .feedback-btn.wrong   { background:linear-gradient(135deg,#f093fb,#f5576c); }
+        @keyframes popIn  { from{transform:scale(.5);opacity:0} to{transform:scale(1);opacity:1} }
+        @keyframes bounce { from{transform:translateY(0)} to{transform:translateY(-10px)} }
+
+        /* ── Layar Selesai ── */
+        .done-screen { display:none; text-align:center; padding:20px; }
+        .done-screen h2 { font-size:2rem; color:#43e97b; }
+        .btn-restart { background:linear-gradient(135deg,#26c6da,#0288d1); color:#fff; border:none; padding:12px 30px; border-radius:50px; font-size:1.1rem; font-weight:800; cursor:pointer; margin-top:16px; }
+    </style>
+</head>
+<body>
+
+<div class="game-container" id="gameScreen">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div class="header-info" id="teacherBadge" style="margin-bottom:0;">Guru: - | Kelas: -</div>
+        <button class="btn-mute" id="btnMute" onclick="toggleMute()" style="background:#e0f7fa; border:1.5px solid #4dd0e1; color:#00796b; padding:4px 12px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:0.8rem;">🔊 Suara: On</button>
+    </div>
+    <h2 id="gameTitle">📝 Kuis Pilihan Ganda 📝</h2>
+
+    <div class="progress-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+    <div class="stats-row">
+        <span id="noSoal">Soal 1 / ?</span>
+        <span id="skorLabel">⭐ Skor: 0</span>
+    </div>
+
+    <div class="soal-box" id="soalText">Memuat soal...</div>
+    <button class="btn-dengar" onclick="bacaSoal()">🔊 Dengar Soal</button>
+
+    <div class="options-grid" id="optionsContainer"></div>
+</div>
+
+<!-- ── Layar Selesai ── -->
+<div class="done-screen" id="doneScreen">
+    <h2>🎉 SELESAI! 🎉</h2>
+    <p id="doneMsg" style="font-size:1.3rem; color:#333;"></p>
+    <button class="btn-restart" onclick="location.reload()">🔄 Main Lagi</button>
+</div>
+
+<!-- ── Feedback Overlay ── -->
+<div class="feedback-overlay" id="feedbackOverlay">
+    <div class="feedback-card">
+        <span class="feedback-emoji" id="feedbackEmoji">🎉</span>
+        <div class="feedback-msg"  id="feedbackMsg">Hebat!</div>
+        <div class="feedback-sub"  id="feedbackSub">Lanjut soal berikutnya</div>
+        <button class="feedback-btn" id="feedbackBtn" onclick="closeFeedback()">Lanjut →</button>
+    </div>
+</div>
+
+<script>
+    const dataGame = {{DATA_GAME_JSON}} || {
+        "judul": "Kuis Pilihan Ganda",
+        "nama_guru": "Ibu Guru",
+        "wali_kelas": "Wali Kelas",
+        "kelas": "SD",
+        "soal_list": [
+            {
+                "pertanyaan": "Ibu kota negara Indonesia adalah ...",
+                "pilihan": ["A. Surabaya", "B. Bandung", "C. Jakarta", "D. Medan"],
+                "jawaban": "C"
+            },
+            {
+                "pertanyaan": "Berapakah hasil dari 7 × 8?",
+                "pilihan": ["A. 54", "B. 56", "C. 48", "D. 64"],
+                "jawaban": "B"
+            }
+        ]
+    };
+
+    let currentIndex = 0;
+    let score = 0;
+    let answered = false;
+    let feedbackCallback = null;
+
+    // ── TTS ──────────────────────────────────────────────────
+    let _idVoice = null;
+    function loadVoice() {
+        if (!('speechSynthesis' in window)) return;
+        const voices = window.speechSynthesis.getVoices();
+        _idVoice = voices.find(v => (v.lang && v.lang.toLowerCase().startsWith('id')) || (v.name && v.name.toLowerCase().includes('indonesia'))) || null;
+    }
+    if ('speechSynthesis' in window) { loadVoice(); window.speechSynthesis.onvoiceschanged = loadVoice; }
+
+    let isMuted = localStorage.getItem('wg_sound_muted') === 'true';
+
+    function updateMuteBtn() {
+        const btn = document.getElementById('btnMute');
+        if (btn) {
+            btn.innerHTML = isMuted ? '🔇 Suara: Off' : '🔊 Suara: On';
+            btn.style.background    = isMuted ? '#ffebee' : '#e0f7fa';
+            btn.style.color         = isMuted ? '#c62828' : '#00796b';
+            btn.style.borderColor   = isMuted ? '#ef9a9a' : '#4dd0e1';
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        localStorage.setItem('wg_sound_muted', isMuted);
+        updateMuteBtn();
+        if (isMuted && window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    function mainkanSuara(teks) {
+        if (isMuted || !teks) return;
+        let clean = teks.replace(/[A-D]\.\s*/g, '').replace(/\.{3}/g, 'titik titik').trim();
+        let url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=id&q=" + encodeURIComponent(clean.substring(0, 200));
+        let audio = new Audio(url);
+        audio.play().catch(() => {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            let u = new SpeechSynthesisUtterance(clean);
+            u.lang = 'id-ID'; if (_idVoice) u.voice = _idVoice; u.rate = 0.88;
+            window.speechSynthesis.speak(u);
+        });
+    }
+
+    function bacaSoal() {
+        if (!dataGame.soal_list || !dataGame.soal_list[currentIndex]) return;
+        mainkanSuara(dataGame.soal_list[currentIndex].pertanyaan);
+    }
+
+    // ── Init ─────────────────────────────────────────────────
+    function initHeader() {
+        if (dataGame.judul) document.getElementById('gameTitle').innerText = '📝 ' + dataGame.judul + ' 📝';
+        if (dataGame.nama_guru || dataGame.kelas) {
+            document.getElementById('teacherBadge').innerText = `👩‍🏫 Guru: ${dataGame.nama_guru || '-'} | 📚 ${dataGame.kelas || '-'} (Wali Kelas: ${dataGame.wali_kelas || '-'})`;
+        }
+        updateMuteBtn();
+    }
+
+    function loadQuestion() {
+        answered = false;
+        const soal = dataGame.soal_list;
+        if (!soal || currentIndex >= soal.length) {
+            showDoneScreen();
+            return;
+        }
+        const q = soal[currentIndex];
+        const total = soal.length;
+
+        document.getElementById('noSoal').innerText  = `Soal ${currentIndex + 1} / ${total}`;
+        document.getElementById('skorLabel').innerText = `⭐ Skor: ${score}`;
+        document.getElementById('progressBar').style.width = ((currentIndex / total) * 100) + '%';
+        document.getElementById('soalText').innerText = q.pertanyaan;
+
+        const container = document.getElementById('optionsContainer');
+        container.innerHTML = '';
+        (q.pilihan || []).forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(btn, opt.charAt(0).toUpperCase(), q.jawaban);
+            container.appendChild(btn);
+        });
+
+        setTimeout(() => mainkanSuara(q.pertanyaan), 350);
+    }
+
+    function checkAnswer(btn, selectedLetter, correctLetter) {
+        if (answered) return;
+        answered = true;
+
+        const isCorrect = (selectedLetter === correctLetter.toUpperCase());
+        const allBtns = document.querySelectorAll('.option-btn');
+        allBtns.forEach(b => {
+            b.disabled = true;
+            if (b.innerText.charAt(0).toUpperCase() === correctLetter.toUpperCase()) {
+                b.classList.add('correct');
+            }
+        });
+        if (!isCorrect) btn.classList.add('wrong');
+
+        if (isCorrect) score += 10;
+
+        showFeedback(isCorrect, () => {
+            currentIndex++;
+            loadQuestion();
+        });
+    }
+
+    // ── Feedback Emoji Modal ─────────────────────────────────
+    const CORRECT_MSGS = [
+        { e:'🎉', m:'Benar! Hore!',     s:'Kamu sangat pintar!' },
+        { e:'⭐', m:'Luar Biasa!',       s:'Jawaban kamu benar!' },
+        { e:'🏆', m:'Kamu Juara!',       s:'Pertahankan semangatnya!' },
+        { e:'✅', m:'Tepat Sekali!',     s:'Terus semangat belajar!' }
+    ];
+    const WRONG_MSGS = [
+        { e:'😢', m:'Maaf, Salah...',  s:'Jangan menyerah, coba lagi!' },
+        { e:'💪', m:'Hampir Benar!',    s:'Terus belajar, kamu pasti bisa!' },
+        { e:'🌈', m:'Belum Tepat...',   s:'Semangat! Pelajari lagi ya!' }
+    ];
+
+    function showFeedback(isCorrect, cb) {
+        const pool = isCorrect ? CORRECT_MSGS : WRONG_MSGS;
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        document.getElementById('feedbackEmoji').innerText = pick.e;
+        document.getElementById('feedbackMsg').innerText   = pick.m;
+        document.getElementById('feedbackSub').innerText   = pick.s;
+        const fbBtn = document.getElementById('feedbackBtn');
+        fbBtn.className = 'feedback-btn ' + (isCorrect ? 'correct' : 'wrong');
+        fbBtn.innerText = isCorrect ? 'Lanjut →' : 'Coba Berikutnya →';
+        feedbackCallback = cb;
+        document.getElementById('feedbackOverlay').classList.add('show');
+    }
+
+    function closeFeedback() {
+        document.getElementById('feedbackOverlay').classList.remove('show');
+        if (feedbackCallback) { feedbackCallback(); feedbackCallback = null; }
+    }
+
+    // ── Layar Selesai ─────────────────────────────────────────
+    function showDoneScreen() {
+        document.getElementById('gameScreen').style.display = 'none';
+        const done = document.getElementById('doneScreen');
+        done.style.display = 'block';
+        const total = (dataGame.soal_list || []).length;
+        const maxScore = total * 10;
+        document.getElementById('doneMsg').innerHTML =
+            `Skor Akhir: <b style="color:#0288d1">${score}</b> / ${maxScore}<br>
+             Jawaban Benar: <b style="color:#43e97b">${score / 10}</b> dari ${total} soal 🎊`;
+        mainkanSuara(`Selamat kamu berhasil menyelesaikan kuis dengan skor ${score} dari ${maxScore}`);
+    }
+
+    // ── Start ─────────────────────────────────────────────────
+    initHeader();
+    loadQuestion();
+</script>
+</body>
+</html>

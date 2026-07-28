@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tebak Isian Singkat</title>
+    <style>
+        body { font-family: 'Comic Sans MS', sans-serif; background-color: #e0f2f1; text-align: center; margin: 0; padding: 20px; }
+        .game-container { background: white; max-width: 520px; margin: auto; padding: 30px; border-radius: 25px; border: 5px solid #4db6ac; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .header-info { background: #e0f2f1; padding: 6px 14px; border-radius: 15px; font-size: 0.85rem; color: #004d40; margin-bottom: 15px; font-weight: bold; }
+        .soal-box { font-size: 1.4rem; margin: 20px 0; font-weight: bold; color: #004d40; line-height: 1.5; }
+        .input-box { font-family: inherit; font-size: 1.4rem; padding: 10px; width: 70%; text-align: center; border: 3px solid #b2dfdb; border-radius: 12px; margin-bottom: 20px; outline: none; }
+        .input-box:focus { border-color: #4db6ac; }
+        .btn-submit { background: #4db6ac; color: white; border: none; padding: 12px 30px; font-size: 1.1rem; border-radius: 12px; cursor: pointer; font-weight: bold; }
+        .btn-submit:hover { background: #00796b; }
+        /* === FEEDBACK PANEL === */
+        .feedback-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center; animation: fadeIn .2s ease; }
+        .feedback-overlay.show { display:flex; }
+        .feedback-card { background:#fff; border-radius:32px; padding:36px 40px 28px; text-align:center; max-width:320px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.25); animation: popIn .3s cubic-bezier(.34,1.56,.64,1); }
+        .feedback-emoji { font-size:5rem; line-height:1; margin-bottom:12px; display:block; animation: bounce 0.5s ease infinite alternate; }
+        .feedback-msg { font-size:1.35rem; font-weight:900; margin-bottom:6px; }
+        .feedback-sub { font-size:0.95rem; color:#777; margin-bottom:20px; }
+        .feedback-btn { border:none; padding:12px 36px; border-radius:50px; font-size:1rem; font-weight:800; cursor:pointer; color:#fff; }
+        .feedback-btn.correct { background:linear-gradient(135deg,#43e97b,#38f9d7); }
+        .feedback-btn.wrong   { background:linear-gradient(135deg,#f093fb,#f5576c); }
+        @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+        @keyframes popIn   { from{transform:scale(.5);opacity:0} to{transform:scale(1);opacity:1} }
+        @keyframes bounce  { from{transform:translateY(0)} to{transform:translateY(-10px)} }
+    </style>
+</head>
+<body>
+
+<div class="game-container" id="gameScreen">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div class="header-info" id="teacherBadge" style="margin-bottom:0;">Guru: - | Kelas: -</div>
+        <button class="btn-mute" id="btnMute" onclick="toggleMute()" style="background:#e0f2f1; border:1.5px solid #4db6ac; color:#00796b; padding:4px 12px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:0.8rem;">🔊 Suara: On</button>
+    </div>
+    <h2 id="gameTitle">✏️ Isi Kotak Kosong ✏️</h2>
+    <div class="soal-box" id="soalText">Memuat soal...</div>
+    <button onclick="bacaSoal()" style="background:#e0f2f1; border:2px solid #4db6ac; color:#00796b; padding:6px 16px; border-radius:50px; font-weight:bold; cursor:pointer; margin-bottom:15px; font-size:0.9rem;">🔊 Dengar Soal</button>
+    <br>
+    <div id="inputArea">
+        <input type="text" class="input-box" id="answerInput" placeholder="Ketik jawabanmu..." autocomplete="off">
+        <br>
+        <button class="btn-submit" id="btnSubmit" onclick="checkAnswer()">Kirim Jawaban</button>
+    </div>
+    <div class="options-container" id="optionsContainer" style="display:none; grid-template-columns:1fr 1fr; gap:12px; margin:15px 0;"></div>
+</div>
+
+<!-- FEEDBACK PANEL -->
+<div class="feedback-overlay" id="feedbackOverlay">
+  <div class="feedback-card">
+    <span class="feedback-emoji" id="feedbackEmoji">🎉</span>
+    <div class="feedback-msg" id="feedbackMsg">Hore!</div>
+    <div class="feedback-sub" id="feedbackSub">Kamu benar!</div>
+    <button class="feedback-btn" id="feedbackBtn" onclick="closeFeedback()">Lanjut ➡️</button>
+  </div>
+</div>
+
+<script>
+    const dataGame = {{DATA_GAME_JSON}} || {
+        "judul": "Isi Kotak Kosong",
+        "nama_guru": "Ibu Guru",
+        "wali_kelas": "Wali Kelas",
+        "kelas": "SD",
+        "soal_list": [
+            {"pertanyaan": "Ibu kota negara Indonesia adalah ...", "jawaban": "jakarta"},
+            {"pertanyaan": "Hewan berbelalai panjang adalah ...", "jawaban": "gajah"}
+        ]
+    };
+
+    let currentIndex = 0;
+
+    function initHeader() {
+        if(dataGame.judul) document.getElementById('gameTitle').innerText = '✏️ ' + dataGame.judul + ' ✏️';
+        if(dataGame.nama_guru || dataGame.kelas) {
+            document.getElementById('teacherBadge').innerText = `👩‍🏫 Guru: ${dataGame.nama_guru || '-'} | 📚 ${dataGame.kelas || '-'} (Wali Kelas: ${dataGame.wali_kelas || '-'})`;
+        }
+        updateMuteBtn();
+    }
+
+    let _idVoice = null;
+    function loadVoice() {
+        if (!('speechSynthesis' in window)) return;
+        const voices = window.speechSynthesis.getVoices();
+        _idVoice = voices.find(v => (v.lang && v.lang.toLowerCase().startsWith('id')) || (v.name && v.name.toLowerCase().includes('indonesia'))) || null;
+    }
+    if ('speechSynthesis' in window) {
+        loadVoice();
+        window.speechSynthesis.onvoiceschanged = loadVoice;
+    }
+
+    let isMuted = localStorage.getItem('wg_sound_muted') === 'true';
+
+    function updateMuteBtn() {
+        const btn = document.getElementById('btnMute');
+        if (btn) {
+            btn.innerHTML = isMuted ? '🔇 Suara: Off' : '🔊 Suara: On';
+            btn.style.background = isMuted ? '#ffebee' : '#e0f2f1';
+            btn.style.color = isMuted ? '#c62828' : '#00796b';
+            btn.style.borderColor = isMuted ? '#ef9a9a' : '#4db6ac';
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        localStorage.setItem('wg_sound_muted', isMuted);
+        updateMuteBtn();
+        if (isMuted && window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    function bacaSoal() {
+        if (isMuted || !dataGame.soal_list || !dataGame.soal_list[currentIndex]) return;
+        let teks = dataGame.soal_list[currentIndex].pertanyaan.replace(/\.\.\./g, 'titik titik');
+        let url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=id&q=" + encodeURIComponent(teks);
+        let audio = new Audio(url);
+        audio.play().catch(() => {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            let u = new SpeechSynthesisUtterance(teks);
+            u.lang = 'id-ID';
+            if (_idVoice) u.voice = _idVoice;
+            u.rate = 0.85;
+            window.speechSynthesis.speak(u);
+        });
+    }
+
+    function loadQuestion() {
+        if(currentIndex >= dataGame.soal_list.length) {
+            document.getElementById('gameScreen').innerHTML = "<h2 style='color:#4caf50;'>🎉 SELAMAT! 🎉</h2><p style='font-size:1.2rem;'>Kamu sukses menjawab semua tantangan!</p>";
+            return;
+        }
+        const q = dataGame.soal_list[currentIndex];
+        document.getElementById('soalText').innerText = q.pertanyaan;
+
+        const inputArea = document.getElementById('inputArea');
+        const optsContainer = document.getElementById('optionsContainer');
+
+        if (q.pilihan && Array.isArray(q.pilihan) && q.pilihan.length > 0) {
+            inputArea.style.display = 'none';
+            optsContainer.style.display = 'grid';
+            optsContainer.innerHTML = '';
+            q.pilihan.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.style.cssText = 'background:#f0f9ff; border:2.5px solid #4db6ac; border-radius:14px; padding:12px; font-size:1rem; font-weight:bold; color:#00796b; cursor:pointer; font-family:inherit; text-align:left;';
+                btn.innerText = opt;
+                btn.onclick = () => checkOptionAnswer(opt, q.jawaban);
+                optsContainer.appendChild(btn);
+            });
+        } else {
+            inputArea.style.display = 'block';
+            optsContainer.style.display = 'none';
+            document.getElementById('answerInput').value = "";
+        }
+        setTimeout(bacaSoal, 300);
+    }
+
+    function checkOptionAnswer(selectedOpt, correctAnswer) {
+        const cleanSel = selectedOpt.replace(/^[A-D]\.\s*/i, '').trim().toLowerCase();
+        const cleanAns = correctAnswer.replace(/^[A-D]\.\s*/i, '').trim().toLowerCase();
+        const selLetter = selectedOpt.trim().charAt(0).toLowerCase();
+        const ansLetter = correctAnswer.trim().charAt(0).toLowerCase();
+
+        if (cleanSel === cleanAns || selLetter === ansLetter || selectedOpt.trim().toLowerCase() === correctAnswer.trim().toLowerCase()) {
+            showFeedback(true, function() { currentIndex++; loadQuestion(); });
+        } else {
+            showFeedback(false);
+        }
+    }
+
+    function checkAnswer() {
+        let uAns = document.getElementById('answerInput').value.trim().toLowerCase();
+        let cAns = dataGame.soal_list[currentIndex].jawaban.toLowerCase();
+
+        if (uAns === cAns) {
+            showFeedback(true, function() { currentIndex++; loadQuestion(); });
+        } else {
+            showFeedback(false);
+        }
+    }
+
+    let _feedbackCallback = null;
+    function showFeedback(isCorrect, callback) {
+        _feedbackCallback = callback || null;
+        const overlay = document.getElementById('feedbackOverlay');
+        const emoji   = document.getElementById('feedbackEmoji');
+        const msg     = document.getElementById('feedbackMsg');
+        const sub     = document.getElementById('feedbackSub');
+        const btn     = document.getElementById('feedbackBtn');
+        if (isCorrect) {
+            emoji.textContent = ['🎉','⭐','🌟','🏆','🥳'][Math.floor(Math.random()*5)];
+            msg.textContent   = 'Horee! Kamu Benar! 🎊';
+            sub.textContent   = 'Jawaban kamu tepat sekali! Hebat!';
+            btn.className     = 'feedback-btn correct';
+            btn.textContent   = 'Lanjut ➡️';
+        } else {
+            emoji.textContent = ['😢','😅','🙈','😬','💪'][Math.floor(Math.random()*5)];
+            msg.textContent   = 'Ups, Belum Tepat...';
+            sub.textContent   = 'Jangan menyerah! Coba lagi ya! 💪';
+            btn.className     = 'feedback-btn wrong';
+            btn.textContent   = 'Coba Lagi 🔄';
+        }
+        overlay.classList.add('show');
+    }
+    function closeFeedback() {
+        document.getElementById('feedbackOverlay').classList.remove('show');
+        if (_feedbackCallback) { _feedbackCallback(); _feedbackCallback = null; }
+    }
+
+    initHeader();
+    loadQuestion();
+</script>
+</body>
+</html>

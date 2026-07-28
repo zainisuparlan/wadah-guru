@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Petualangan Cerita Edukasi</title>
+    <style>
+        :root {
+            --bg-color: #e0f7fa;
+            --primary-color: #4fc3f7;
+            --card-color: #ffffff;
+            --text-color: #2c3e50;
+        }
+        body {
+            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .game-container {
+            background-color: var(--card-color);
+            border-radius: 25px;
+            padding: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            border: 5px solid #b3e5fc;
+        }
+        .header-info {
+            background: #e0f7fa;
+            padding: 6px 14px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            color: #0288d1;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .header-status {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .story-box {
+            background-color: #fff9c4;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            font-size: 1.15rem;
+            line-height: 1.5;
+            border-left: 5px solid #fff176;
+            text-align: left;
+        }
+        .question-box {
+            font-size: 1.25rem;
+            margin-bottom: 25px;
+            font-weight: bold;
+            color: #0288d1;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        .option-btn {
+            background-color: #f1f8ff;
+            border: 3px solid #64b5f6;
+            border-radius: 15px;
+            padding: 15px;
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            text-align: left;
+        }
+        .option-btn:hover {
+            background-color: #bbdefb;
+            transform: scale(1.02);
+        }
+        .feedback {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            height: 30px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container" id="gameScreen">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div class="header-info" id="teacherBadge" style="margin-bottom:0;">Guru: - | Kelas: -</div>
+        <button class="btn-mute" id="btnMute" onclick="toggleMute()" style="background:#e0f7fa; border:1.5px solid #4fc3f7; color:#0288d1; padding:4px 12px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:0.8rem;">🔊 Suara: On</button>
+    </div>
+    <h2 id="gameTitle" style="color: #0288d1; margin-bottom: 10px;">📖 Petualangan Cerita 📖</h2>
+
+    <div class="header-status">
+        <span id="scoreLabel">Skor: 0</span>
+        <span id="levelLabel">Babak: 1/3</span>
+    </div>
+    
+    <div class="story-box" id="storyText">Memuat cerita...</div>
+    <div class="question-box" id="questionText">Memuat soal...</div>
+    
+    <div class="options-grid" id="optionsContainer">
+        <!-- Pilihan jawaban -->
+    </div>
+    
+    <div class="feedback" id="feedbackText"></div>
+</div>
+
+<script>
+    const dataGame = {{DATA_GAME_JSON}} || {
+        "judul": "Petualangan Si Kiko",
+        "nama_guru": "Ibu Guru",
+        "wali_kelas": "Wali Kelas",
+        "kelas": "SD",
+        "level": [
+            {
+                "cerita": "Kiko si kelinci kecil tersesat di dalam hutan buah. Di depannya ada sebuah pohon apel ajaib yang besar dan bisa berbicara!",
+                "soal": "Pohon apel bertanya: 'Jika aku punya 4 buah apel lalu jatuh ke tanah 2 buah, berapa sisa buah apel yang ada di pohon?'",
+                "pilihan": ["A. 2 buah apel", "B. 3 buah apel", "C. 5 buah apel", "D. 6 buah apel"],
+                "jawaban": "A"
+            }
+        ]
+    };
+
+    let currentLevel = 0;
+    let score = 0;
+
+    function initHeader() {
+        if(dataGame.judul) document.getElementById('gameTitle').innerText = '📖 ' + dataGame.judul + ' 📖';
+        if(dataGame.nama_guru || dataGame.kelas) {
+            document.getElementById('teacherBadge').innerText = `👩‍🏫 Guru: ${dataGame.nama_guru || '-'} | 📚 ${dataGame.kelas || '-'} (Wali Kelas: ${dataGame.wali_kelas || '-'})`;
+        }
+        updateMuteBtn();
+    }
+
+    let _idVoice = null;
+    function loadVoice() {
+        if (!('speechSynthesis' in window)) return;
+        const voices = window.speechSynthesis.getVoices();
+        _idVoice = voices.find(v => (v.lang && v.lang.toLowerCase().startsWith('id')) || (v.name && v.name.toLowerCase().includes('indonesia'))) || null;
+    }
+    if ('speechSynthesis' in window) {
+        loadVoice();
+        window.speechSynthesis.onvoiceschanged = loadVoice;
+    }
+
+    let isMuted = localStorage.getItem('wg_sound_muted') === 'true';
+
+    function updateMuteBtn() {
+        const btn = document.getElementById('btnMute');
+        if (btn) {
+            btn.innerHTML = isMuted ? '🔇 Suara: Off' : '🔊 Suara: On';
+            btn.style.background = isMuted ? '#ffebee' : '#e0f7fa';
+            btn.style.color = isMuted ? '#c62828' : '#0288d1';
+            btn.style.borderColor = isMuted ? '#ef9a9a' : '#4fc3f7';
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        localStorage.setItem('wg_sound_muted', isMuted);
+        updateMuteBtn();
+        if (isMuted && window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    function bacaCerita() {
+        if (isMuted || !dataGame.level || !dataGame.level[currentLevel]) return;
+        let teksData = dataGame.level[currentLevel];
+        let gabung = teksData.cerita + ". " + teksData.soal;
+        let url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=id&q=" + encodeURIComponent(gabung.substring(0, 200));
+        let audio = new Audio(url);
+        audio.play().catch(() => {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            let u = new SpeechSynthesisUtterance(gabung);
+            u.lang = 'id-ID';
+            if (_idVoice) u.voice = _idVoice;
+            u.rate = 0.85;
+            window.speechSynthesis.speak(u);
+        });
+    }
+
+    function loadLevel() {
+        if (currentLevel >= dataGame.level.length) {
+            document.getElementById('gameScreen').innerHTML = `
+                <h2 style="color: #4caf50; font-size: 2rem;">🎉 HORE! SELESAI 🎉</h2>
+                <p style="font-size: 1.4rem;">Kamu berhasil menyelesaikan petualangan dengan skor akhir: <b>${score}</b></p>
+                <button onclick="location.reload()" style="padding: 12px 25px; font-size: 1.1rem; border-radius: 10px; border: none; background-color: #4caf50; color: white; cursor: pointer; font-family: inherit;">Main Lagi</button>
+            `;
+            return;
+        }
+
+        const levelData = dataGame.level[currentLevel];
+        document.getElementById('levelLabel').innerText = `Babak: ${currentLevel + 1}/${dataGame.level.length}`;
+        document.getElementById('storyText').innerHTML = levelData.cerita + `<br><button onclick="bacaCerita()" style="margin-top:10px; background:#fff; border:2px solid #fbc02d; color:#f57f17; padding:4px 14px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:0.85rem;">🔊 Bacakan Cerita</button>`;
+        document.getElementById('questionText').innerText = levelData.soal;
+        document.getElementById('feedbackText').innerText = "";
+        setTimeout(bacaCerita, 400);
+
+        const container = document.getElementById('optionsContainer');
+        container.innerHTML = "";
+
+        levelData.pilihan.forEach(option => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = option;
+            btn.onclick = () => checkAnswer(option.charAt(0));
+            container.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selectedLetter) {
+        const correctAnswer = dataGame.level[currentLevel].jawaban;
+        const feedback = document.getElementById('feedbackText');
+        
+        if (selectedLetter === correctAnswer) {
+            feedback.innerHTML = "<span style='color: #4caf50;'>✅ Hebat! Jawabannya Benar!</span>";
+            score += 10;
+            document.getElementById('scoreLabel').innerText = `Skor: ${score}`;
+        } else {
+            feedback.innerHTML = "<span style='color: #f44336;'>❌ Ups, Kurang Tepat!</span>";
+        }
+
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(b => b.disabled = true);
+
+        setTimeout(() => {
+            currentLevel++;
+            loadLevel();
+        }, 1500);
+    }
+
+    initHeader();
+    loadLevel();
+</script>
+
+</body>
+</html>

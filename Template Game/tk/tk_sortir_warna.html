@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kolektor Warna-Warni TK</title>
+    <style>
+        body { font-family: 'Comic Sans MS', sans-serif; background-color: #fffde7; text-align: center; margin: 0; padding: 20px; }
+        .game-container { background: white; max-width: 480px; min-height: 520px; margin: auto; padding: 20px; border-radius: 25px; border: 5px solid #fff176; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .header-info { background: #fffde7; padding: 6px 14px; border-radius: 15px; font-size: 0.85rem; color: #f57f17; margin-bottom: 12px; font-weight: bold; }
+        .instruksi { color: #f57f17; font-size: 1.15rem; font-weight: bold; margin-bottom: 10px; }
+        
+        .sky-area { background: #e3f2fd; height: 260px; border-radius: 15px; position: relative; overflow: hidden; border: 3px dashed #90caf9; }
+        .falling-item { position: absolute; top: 80px; left: 45%; font-size: 4rem; transition: transform 0.3s ease; }
+        
+        .basket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .basket-btn { border: none; padding: 15px; font-size: 1.1rem; font-weight: bold; border-radius: 15px; color: white; cursor: pointer; transition: 0.2s; }
+        .basket-btn:active { transform: scale(0.95); }
+        .btn-merah { background: #f44336; box-shadow: 0 5px #b71c1c; }
+        .btn-hijau { background: #4caf50; box-shadow: 0 5px #1b5e20; }
+        
+        .score-box { font-size: 1.3rem; font-weight: bold; margin-top: 15px; color: #333; }
+        /* === FEEDBACK PANEL === */
+        .feedback-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center; }
+        .feedback-overlay.show { display:flex; }
+        .feedback-card { background:#fff; border-radius:32px; padding:36px 40px 28px; text-align:center; max-width:320px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.25); animation: popIn .3s cubic-bezier(.34,1.56,.64,1); }
+        .feedback-emoji { font-size:5rem; line-height:1; margin-bottom:12px; display:block; animation: bounce 0.5s ease infinite alternate; }
+        .feedback-msg { font-size:1.35rem; font-weight:900; margin-bottom:6px; }
+        .feedback-sub { font-size:0.95rem; color:#777; margin-bottom:20px; }
+        .feedback-btn { border:none; padding:12px 36px; border-radius:50px; font-size:1rem; font-weight:800; cursor:pointer; color:#fff; }
+        .feedback-btn.correct { background:linear-gradient(135deg,#43e97b,#38f9d7); }
+        .feedback-btn.wrong   { background:linear-gradient(135deg,#f093fb,#f5576c); }
+        @keyframes popIn  { from{transform:scale(.5);opacity:0} to{transform:scale(1);opacity:1} }
+        @keyframes bounce { from{transform:translateY(0)} to{transform:translateY(-10px)} }
+    </style>
+</head>
+<body>
+
+<div class="game-container" id="gameScreen">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div class="header-info" id="teacherBadge" style="margin-bottom:0;">Guru: - | Kelas: -</div>
+        <button class="btn-mute" id="btnMute" onclick="toggleMute()" style="background:#fffde7; border:1.5px solid #f57f17; color:#f57f17; padding:4px 12px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:0.8rem;">🔊 Suara: On</button>
+    </div>
+    <h2 id="gameTitle">🧺 Kolektor Warna 🧺</h2>
+    <div class="instruksi" id="targetText">Tangkap buah berwarna...</div>
+    
+    <div class="sky-area">
+        <div class="falling-item" id="buah">🍎</div>
+    </div>
+
+    <div class="basket-grid">
+        <button class="basket-btn btn-merah" onclick="tangkap('merah')">🧺 Keranjang MERAH</button>
+        <button class="basket-btn btn-hijau" onclick="tangkap('hijau')">🧺 Keranjang HIJAU</button>
+    </div>
+    <div class="score-box" id="scoreText">Bintang: </div>
+</div>
+
+<div class="feedback-overlay" id="feedbackOverlay">
+  <div class="feedback-card">
+    <span class="feedback-emoji" id="feedbackEmoji">🎉</span>
+    <div class="feedback-msg" id="feedbackMsg">Hore!</div>
+    <div class="feedback-sub" id="feedbackSub">Kamu benar!</div>
+    <button class="feedback-btn" id="feedbackBtn" onclick="closeFeedback()">Lanjut ➡️</button>
+  </div>
+</div>
+
+<script>
+    const dataGame = {{DATA_GAME_JSON}} || {
+        "judul": "Kolektor Warna",
+        "nama_guru": "Ibu Guru",
+        "wali_kelas": "Wali Kelas",
+        "kelas": "TK-B",
+        "materi_sortir": [
+            {"item": "🍎", "warna": "merah", "petunjuk": "MERAH ❤️"},
+            {"item": "🍏", "warna": "hijau", "petunjuk": "HIJAU 💚"},
+            {"item": "🍓", "warna": "merah", "petunjuk": "MERAH ❤️"},
+            {"item": "🥦", "warna": "hijau", "petunjuk": "HIJAU 💚"}
+        ]
+    };
+
+    let currentIndex = 0;
+    let score = 0;
+
+    function initHeader() {
+        if(dataGame.judul) document.getElementById('gameTitle').innerText = '🧺 ' + dataGame.judul + ' 🧺';
+        if(dataGame.nama_guru || dataGame.kelas) {
+            document.getElementById('teacherBadge').innerText = `👩‍🏫 Guru: ${dataGame.nama_guru || '-'} | 📚 ${dataGame.kelas || '-'} (Wali Kelas: ${dataGame.wali_kelas || '-'})`;
+        }
+        updateMuteBtn();
+    }
+
+    let _idVoice = null;
+    function loadVoice() {
+        if (!('speechSynthesis' in window)) return;
+        const voices = window.speechSynthesis.getVoices();
+        _idVoice = voices.find(v => (v.lang && v.lang.toLowerCase().startsWith('id')) || (v.name && v.name.toLowerCase().includes('indonesia'))) || null;
+    }
+    if ('speechSynthesis' in window) {
+        loadVoice();
+        window.speechSynthesis.onvoiceschanged = loadVoice;
+    }
+
+    let isMuted = localStorage.getItem('wg_sound_muted') === 'true';
+
+    function updateMuteBtn() {
+        const btn = document.getElementById('btnMute');
+        if (btn) {
+            btn.innerHTML = isMuted ? '🔇 Suara: Off' : '🔊 Suara: On';
+            btn.style.background = isMuted ? '#ffebee' : '#fffde7';
+            btn.style.color = isMuted ? '#c62828' : '#f57f17';
+            btn.style.borderColor = isMuted ? '#ef9a9a' : '#f57f17';
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        localStorage.setItem('wg_sound_muted', isMuted);
+        updateMuteBtn();
+        if (isMuted && window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    function mainkanSuara(teks) {
+        if (isMuted || !teks) return;
+        let cleanText = teks.replace(/❤️|💚|💙|💛|🧡|💜|✨|🎉|❌|💖/g, '').trim();
+        let url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=id&q=" + encodeURIComponent(cleanText);
+        let audio = new Audio(url);
+        audio.play().catch(() => {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            let u = new SpeechSynthesisUtterance(cleanText);
+            u.lang = 'id-ID';
+            if (_idVoice) u.voice = _idVoice;
+            u.rate = 0.85;
+            window.speechSynthesis.speak(u);
+        });
+    }
+
+    function bacaPetunjuk() {
+        if (!dataGame.materi_sortir || !dataGame.materi_sortir[currentIndex]) return;
+        let petunjukText = dataGame.materi_sortir[currentIndex].petunjuk.replace(/❤️|💚|💙|💛|🧡|💜/g, '');
+        mainkanSuara("Masukkan ke warna " + petunjukText);
+    }
+
+    function nextItem() {
+        if (currentIndex >= dataGame.materi_sortir.length) {
+            document.getElementById('gameScreen').innerHTML = `
+                <h2 style='color:#4caf50; font-size:2rem;'>🎉 HEBAT SEKALI! 🎉</h2>
+                <p style='font-size:1.3rem;'>Kamu berhasil mengumpulkan semua benda ke keranjang!</p>
+                <p style='font-size:1.5rem;'>Total Nilai: <b>${"⭐".repeat(score)}</b></p>
+                <button onclick="location.reload()" style="padding:10px 20px; font-size:1.1rem; border-radius:10px; border:none; background:#4caf50; color:white; cursor:pointer;">Main Lagi</button>
+            `;
+            return;
+        }
+
+        const data = dataGame.materi_sortir[currentIndex];
+        document.getElementById('targetText').innerText = "Masukkan objek ini ke warna: " + data.petunjuk;
+        
+        const buahEl = document.getElementById('buah');
+        buahEl.innerText = data.item;
+        setTimeout(bacaPetunjuk, 300);
+    }
+
+    function tangkap(warnaPilihan) {
+        const jawabanBenar = dataGame.materi_sortir[currentIndex].warna;
+        
+        if (warnaPilihan === jawabanBenar) {
+            score++;
+            document.getElementById('scoreText').innerText = "Bintang: " + "⭐".repeat(score);
+            showFeedback(true, function() { currentIndex++; nextItem(); });
+        } else {
+            showFeedback(false, function() { currentIndex++; nextItem(); });
+        }
+    }
+
+    let _cb = null;
+    function showFeedback(isCorrect, callback) {
+        _cb = callback || null;
+        const ov = document.getElementById('feedbackOverlay');
+        document.getElementById('feedbackEmoji').textContent = isCorrect
+            ? ['🎉','⭐','🌟','🏆','🥳'][Math.floor(Math.random()*5)]
+            : ['😢','😅','🙈','😬','💪'][Math.floor(Math.random()*5)];
+        document.getElementById('feedbackMsg').textContent  = isCorrect ? 'Nyam! Benar Sekali! 😋' : 'Ups, Salah Keranjang...';
+        document.getElementById('feedbackSub').textContent  = isCorrect ? 'Bintangmu bertambah!' : 'Jangan sedih, coba di keranjang lain! 💪';
+        document.getElementById('feedbackBtn').textContent  = isCorrect ? 'Lanjut ➡️' : 'Coba Lagi 🔄';
+        document.getElementById('feedbackBtn').className    = isCorrect ? 'feedback-btn correct' : 'feedback-btn wrong';
+        ov.classList.add('show');
+    }
+    function closeFeedback() {
+        document.getElementById('feedbackOverlay').classList.remove('show');
+        if (_cb) { _cb(); _cb = null; }
+    }
+
+    initHeader();
+    nextItem();
+</script>
+</body>
+</html>

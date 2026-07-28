@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wadah Guru — Generator Game Edukasi Cerdas</title>
+  <meta name="description" content="Platform gratis untuk guru TK dan SD membuat game edukasi HTML5 interaktif siap cetak offline. Karya Zaini Suparlan.">
+  <meta name="keywords" content="game edukasi, guru TK, guru SD, AI, game HTML5, pembelajaran interaktif">
+  <meta name="author" content="Zaini Suparlan">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ═══ TOP ANNOUNCEMENT BAR ══════════════════════════════ -->
+  <div class="topbar-announcement">
+    🌐 Kunjungi <a href="https://netstream.my.id" target="_blank" rel="noopener noreferrer">Netstream.my.id</a> untuk semua layanan digital kami
+  </div>
+
+  <!-- ═══ HERO HEADER ═══════════════════════════════════════ -->
+  <header class="hero-header">
+    <div class="hero-bg-blobs">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+    </div>
+    <div class="hero-content">
+      <div class="logo-badge">
+        <span class="logo-icon">🎓</span>
+        <div class="logo-text-wrap">
+          <span class="logo-text">Wadah Guru</span>
+          <span class="logo-credit">by Zaini Suparlan</span>
+        </div>
+      </div>
+      <h1 class="hero-title">
+        Buat Game Edukasi<br>
+        <span class="gradient-text">Interaktif & Cerdas</span> dalam Sekejap
+      </h1>
+      <p class="hero-subtitle">
+        Platform khusus untuk guru TK &amp; SD — Cetak game HTML5 interaktif siap pakai offline,<br>
+        langsung dari kelas ke tangan murid 🚀
+      </p>
+      <div class="hero-badges">
+        <span class="badge">✨ Gratis Selamanya</span>
+        <span class="badge">📴 Offline Ready</span>
+        <span class="badge">🧠 Generator Cerdas</span>
+        <span class="badge">🎮 9 Jenis Game</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ MAIN CONTENT ══════════════════════════════════════ -->
+  <main class="main-container">
+
+    <!-- ── STEP INDICATOR ─────────────────────────────────── -->
+    <div class="step-indicator">
+      <div class="step active" id="step-indicator-1">
+        <div class="step-num">1</div>
+        <div class="step-label">Data Guru</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" id="step-indicator-2">
+        <div class="step-num">2</div>
+        <div class="step-label">Pilih Game</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" id="step-indicator-3">
+        <div class="step-num">3</div>
+        <div class="step-label">Tema Pelajaran</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" id="step-indicator-4">
+        <div class="step-num">4</div>
+        <div class="step-label">Cetak!</div>
+      </div>
+    </div>
+
+    <!-- ── FORM CARD ──────────────────────────────────────── -->
+    <div class="form-card" id="generator-form-card">
+
+      <form id="gameForm" novalidate>
+
+        <!-- ── SECTION 1: Data Guru ─────────────────────── -->
+        <section class="form-section" id="section-1">
+          <div class="section-header">
+            <div class="section-icon">👩‍🏫</div>
+            <div>
+              <h2 class="section-title">Data Identitas Guru</h2>
+              <p class="section-desc">Informasi ini akan tampil di halaman game untuk anak-anak</p>
+            </div>
+          </div>
+
+          <div class="input-grid">
+            <div class="input-group">
+              <label class="input-label" for="namaGuru">
+                <span class="label-icon">✍️</span> Nama Guru / Pembuat
+                <span class="required-star">*</span>
+              </label>
+              <input
+                type="text"
+                id="namaGuru"
+                name="namaGuru"
+                class="input-field"
+                placeholder="cth: Ibu Sari Dewi, S.Pd."
+                maxlength="80"
+                required
+                autocomplete="name"
+              >
+              <div class="input-hint">Nama akan muncul sebagai kredit di game</div>
+            </div>
+
+            <div class="input-group">
+              <label class="input-label" for="waliKelas">
+                <span class="label-icon">🏫</span> Wali Kelas
+                <span class="required-star">*</span>
+              </label>
+              <input
+                type="text"
+                id="waliKelas"
+                name="waliKelas"
+                class="input-field"
+                placeholder="cth: Ibu Rina atau Pak Budi"
+                maxlength="80"
+                required
+              >
+            </div>
+
+            <div class="input-group input-group-full">
+              <label class="input-label" for="kelas">
+                <span class="label-icon">📚</span> Tingkat Kelas
+                <span class="required-star">*</span>
+              </label>
+              <input
+                type="text"
+                id="kelas"
+                name="kelas"
+                class="input-field"
+                placeholder="cth: Kelas 3 SD, Kelas 5 SD, TK-A, TK-B"
+                maxlength="50"
+                required
+              >
+              <div class="input-hint">Tingkat kelas menentukan tingkat kesulitan soal yang dibuat AI</div>
+            </div>
+          </div>
+        </section>
+
+        <div class="section-divider"><span>✦</span></div>
+
+        <!-- ── SECTION 2: Pilih Game ─────────────────────── -->
+        <section class="form-section" id="section-2">
+          <div class="section-header">
+            <div class="section-icon">🎮</div>
+            <div>
+              <h2 class="section-title">Pilih Jenis Game</h2>
+              <p class="section-desc">Tersedia 9 jenis game untuk TK dan SD</p>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label" for="templateKey">
+              <span class="label-icon">🎯</span> Jenis Game
+              <span class="required-star">*</span>
+            </label>
+            <div class="select-wrapper">
+              <select id="templateKey" name="templateKey" class="input-field select-field" required>
+                <option value="" disabled selected>— Pilih jenis game —</option>
+                <optgroup label="🟡 Untuk Siswa SD">
+                  <option value="sd_pilihan_ganda">📝 Pilihan Ganda A/B/C/D (Multiple Choice)</option>
+                  <option value="sd_flashcard">🃏 Kartu Ajaib (Flashcard)</option>
+                  <option value="sd_isian_singkat">✏️ Isian Singkat (Fill in the Blank)</option>
+                  <option value="sd_labirin">🌀 Labirin Angka (Maze Quiz)</option>
+                  <option value="sd_mencocokkan">🤝 Mencocokkan Pasangan (Matching)</option>
+                  <option value="sd_petualangan_cerita">📖 Petualangan Cerita (Story Adventure)</option>
+                  <option value="sd_tarik_tambang">🪢 Tarik Tambang Kuis (Tug of War)</option>
+                </optgroup>
+                <optgroup label="🔵 Untuk Siswa TK">
+                  <option value="tk_mencocokkan_garis">🌸 Hubungkan Garis (Match Lines)</option>
+                  <option value="tk_sortir_warna">🧺 Sortir Warna &amp; Benda</option>
+                  <option value="tk_tebak_suara">🔍 Detektif Suara (Sound Detective)</option>
+                </optgroup>
+              </select>
+              <div class="select-arrow">▾</div>
+            </div>
+          </div>
+
+          <!-- Game Preview Card -->
+          <div class="game-preview" id="gamePreview" style="display:none;">
+            <div class="preview-icon" id="previewIcon"></div>
+            <div class="preview-body">
+              <div class="preview-title" id="previewTitle"></div>
+              <div class="preview-desc" id="previewDesc"></div>
+            </div>
+          </div>
+        </section>
+
+        <div class="section-divider"><span>✦</span></div>
+
+        <!-- ── SECTION 3: Tema Pelajaran ────────────────── -->
+        <section class="form-section" id="section-3">
+          <div class="section-header">
+            <div class="section-icon">💡</div>
+            <div>
+              <h2 class="section-title">Tema / Kata Kunci Pelajaran</h2>
+              <p class="section-desc">AI akan membuat konten game berdasarkan tema ini</p>
+            </div>
+          </div>
+
+          <!-- 🪄 ASISTEN KATA KUNCI AI (PROMPT REFINER) -->
+          <div class="prompt-assistant-box" id="promptAssistantBox">
+            <div class="assistant-header">
+              <span class="assistant-badge">🪄 ASISTEN AI</span>
+              <h3 class="assistant-title">Asisten Pembuat Kata Kunci Otomatis</h3>
+              <p class="assistant-desc">Ketik materi singkat di bawah ini, biarkan AI merangkai narasi cerita game yang seru dan detail!</p>
+            </div>
+
+            <div class="input-group" style="margin-bottom: 12px;">
+              <label class="input-label" for="shortTopic">
+                <span class="label-icon">✏️</span> Ketik Materi Singkat:
+              </label>
+              <input
+                type="text"
+                id="shortTopic"
+                class="input-field"
+                placeholder="Misal: Perkalian Kelas 2 atau Fotosintesis"
+                maxlength="150"
+              >
+            </div>
+
+            <button type="button" class="btn-assistant-refine" id="btnRefinePrompt" onclick="handleRefinePrompt()">
+              <span id="refineBtnIcon">✨</span>
+              <span id="refineBtnText">Rangkai Kata Kunci Otomatis</span>
+            </button>
+
+            <!-- Box Hasil Rangkaian AI -->
+            <div class="assistant-result-area" id="assistantResultArea" style="display: none;">
+              <label class="input-label" style="color: var(--primary-dark); font-weight: 800;">
+                <span class="label-icon">🤖</span> Hasil Rangkaian Cerita AI:
+              </label>
+              <textarea
+                id="refinedPromptResult"
+                class="input-field textarea-field result-textarea"
+                rows="3"
+                readonly
+              ></textarea>
+              <div class="assistant-action-buttons">
+                <button type="button" class="btn-assistant-secondary" id="btnRegeneratePrompt" onclick="handleRefinePrompt()">
+                  🔄 Rangkai Ulang (Jika Kurang Cocok)
+                </button>
+                <button type="button" class="btn-assistant-primary" id="btnCopyToMain" onclick="handleCopyRefinedToMain()">
+                  💾 Salin &amp; Masukkan ke Wadah Utama
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- ──────────── END ASISTEN KATA KUNCI AI ──────────── -->
+
+          <div class="input-group">
+            <label class="input-label" for="keywords">
+              <span class="label-icon">🔑</span> Kata Kunci / Tema
+              <span class="required-star">*</span>
+            </label>
+            <textarea
+              id="keywords"
+              name="keywords"
+              class="input-field textarea-field"
+              placeholder="Contoh:&#10;• Penjumlahan dan pengurangan angka 1-20&#10;• Fotosintesis pada tumbuhan&#10;• Nama-nama hewan dan makanannya&#10;• Huruf vokal dan konsonan&#10;• Sistem tata surya"
+              rows="4"
+              maxlength="500"
+              required
+            ></textarea>
+            <div class="char-counter"><span id="charCount">0</span>/500 karakter</div>
+            <div class="input-hint">💡 Semakin detail kata kuncinya, semakin bagus konten game yang dibuat AI</div>
+          </div>
+
+          <!-- Contoh tema cepat -->
+          <div class="quick-tags">
+            <span class="quick-tag-label">Coba tema:</span>
+            <button type="button" class="quick-tag" onclick="setKeyword('Penjumlahan 1-20 untuk kelas 1 SD')">➕ Penjumlahan</button>
+            <button type="button" class="quick-tag" onclick="setKeyword('Nama-nama hewan dan makanannya')">🐾 Hewan & Makanan</button>
+            <button type="button" class="quick-tag" onclick="setKeyword('Mengenal huruf A sampai Z untuk TK')">🔤 Huruf Alfabet</button>
+            <button type="button" class="quick-tag" onclick="setKeyword('Fotosintesis dan bagian-bagian daun')">🌿 Fotosintesis</button>
+            <button type="button" class="quick-tag" onclick="setKeyword('Warna-warna dasar: merah, kuning, biru')">🎨 Warna Dasar</button>
+            <button type="button" class="quick-tag" onclick="setKeyword('Perkalian 1-10 kelas 3 SD')">✖️ Perkalian</button>
+          </div>
+        </section>
+
+        <!-- ── GENERATE BUTTON ────────────────────────────── -->
+        <div class="generate-area">
+          <button type="submit" class="btn-generate" id="btnGenerate">
+            <span class="btn-icon">🎨</span>
+            <span class="btn-text">Cetak Game Pembelajaran (HTML5)</span>
+            <span class="btn-sub">AI akan membuat & mengunduh file .html otomatis</span>
+          </button>
+
+          <p class="generate-note">
+            🔒 Semua file game yang dicetak menyertakan watermark <strong>by Zaini Suparlan</strong> secara permanen
+          </p>
+        </div>
+
+      </form>
+
+    </div><!-- /form-card -->
+
+    <!-- ── RIWAYAT GAME YANG DIBUAT ─────────────────────── -->
+    <section class="downloads-section" id="downloadsSection">
+      <div class="downloads-header">
+        <div class="downloads-title">
+          <span>📂</span>
+          <h2>Riwayat Game Dibuat</h2>
+          <span class="downloads-badge" id="downloadsBadge" style="display:none">0</span>
+        </div>
+        <button class="btn-refresh-downloads" onclick="loadDownloads()" title="Perbarui daftar">🔄 Perbarui</button>
+      </div>
+      <div class="downloads-list" id="downloadsList"></div>
+      <div class="downloads-empty" id="downloadsEmpty">
+        <span class="empty-icon">🎮</span>
+        <p>Belum ada game yang dibuat.</p>
+        <p class="empty-sub">Game yang Anda cetak akan muncul di sini dan bisa diunduh ulang kapan saja!</p>
+      </div>
+    </section>
+
+    <!-- ── LOADING OVERLAY ────────────────────────────────── -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-card">
+        <div class="loading-animation">
+          <div class="ai-spinner">
+            <div class="spinner-ring ring-1"></div>
+            <div class="spinner-ring ring-2"></div>
+            <div class="spinner-ring ring-3"></div>
+            <div class="spinner-center">🤖</div>
+          </div>
+        </div>
+        <h3 class="loading-title">AI Sedang Membuat Game...</h3>
+        <div class="loading-steps" id="loadingSteps">
+          <div class="loading-step active" id="ls1">🧠 Memahami tema pelajaran...</div>
+          <div class="loading-step" id="ls2">✏️ Membuat soal dan konten...</div>
+          <div class="loading-step" id="ls3">🎨 Menyusun layout game...</div>
+          <div class="loading-step" id="ls4">📦 Menyiapkan file untuk diunduh...</div>
+        </div>
+        <p class="loading-note">Proses ini membutuhkan 10-30 detik. Jangan tutup halaman ini.</p>
+      </div>
+    </div>
+
+    <!-- ── SUCCESS TOAST ──────────────────────────────────── -->
+    <div class="toast" id="successToast">
+      <div class="toast-icon">✅</div>
+      <div class="toast-body">
+        <strong>Game berhasil dibuat!</strong>
+        <span>File HTML5 sedang diunduh...</span>
+      </div>
+    </div>
+
+    <!-- ── ERROR TOAST ────────────────────────────────────── -->
+    <div class="toast toast-error" id="errorToast">
+      <div class="toast-icon">❌</div>
+      <div class="toast-body">
+        <strong id="errorTitle">Terjadi Kesalahan</strong>
+        <span id="errorMsg">Silakan coba lagi.</span>
+      </div>
+    </div>
+
+    <!-- ── HOW IT WORKS ───────────────────────────────────── -->
+    <section class="how-it-works">
+      <h2 class="hiw-title">✨ Cara Kerja Platform Ini</h2>
+      <div class="hiw-grid">
+        <div class="hiw-card">
+          <div class="hiw-icon">📝</div>
+          <h3>1. Isi Formulir</h3>
+          <p>Masukkan data guru, pilih jenis game, dan tuliskan tema pelajaran yang ingin dijadikan game.</p>
+        </div>
+        <div class="hiw-card">
+          <div class="hiw-icon">⚡</div>
+          <h3>2. Sistem Bekerja</h3>
+          <p>Sistem cerdas kami secara otomatis membuat soal, konten, dan data game yang relevan dengan tema pelajaran Anda.</p>
+        </div>
+        <div class="hiw-card">
+          <div class="hiw-icon">📥</div>
+          <h3>3. Unduh & Mainkan</h3>
+          <p>File HTML5 siap pakai langsung terunduh. Buka di browser tanpa perlu internet — offline ready!</p>
+        </div>
+        <div class="hiw-card">
+          <div class="hiw-icon">🎮</div>
+          <h3>4. Anak Bermain</h3>
+          <p>Siswa bisa langsung bermain game edukasi interaktif yang sudah dipersonalisasi untuk kelas mereka.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── GAME GALLERY ───────────────────────────────────── -->
+    <section class="game-gallery">
+      <h2 class="gallery-title">🎮 Koleksi Template Game</h2>
+      <div class="gallery-grid">
+        <div class="gallery-card" onclick="selectTemplate('sd_pilihan_ganda')">
+          <div class="gallery-emoji">📝</div>
+          <div class="gallery-name">Pilihan Ganda</div>
+          <div class="gallery-level sd-badge">SD</div>
+          <p class="gallery-desc">Kuis pilihan ganda A, B, C, D dengan skor &amp; suara</p>
+        </div>
+        <div class="gallery-card" onclick="selectTemplate('sd_flashcard')">
+          <div class="gallery-emoji">🃏</div>
+          <div class="gallery-name">Kartu Ajaib</div>
+          <div class="gallery-level sd-badge">SD</div>
+          <p class="gallery-desc">Klik kartu untuk membuka rahasia di baliknya!</p>
+        </div>
+        <div class="gallery-card" onclick="selectTemplate('sd_isian_singkat')">
+          <div class="gallery-emoji">✏️</div>
+          <div class="gallery-name">Isian Singkat</div>
+          <div class="gallery-level sd-badge">SD</div>
+          <p class="gallery-desc">Lengkapi kalimat dengan kata yang tepat</p>
+        </div>
+        <div class="gallery-card" onclick="selectTemplate('sd_labirin')">
+          <div class="gallery-emoji">🌀</div>
+          <div class="gallery-name">Labirin Angka</div>
+          <div class="gallery-level sd-badge">SD</div>
+          <p class="gallery-desc">Bantu si Kiko menavigasi labirin jawaban!</p>
+        </div>
+        <div class="gallery-card" onclick="selectTemplate('sd_mencocokkan')">
+          <div class="gallery-emoji">🤝</div>
+          <div class="gallery-name">Pasangan Serasi</div>
+          <div class="gallery-level sd-badge">SD</div>
+          <p class="gallery-desc">Cocokkan item kiri dengan pasangan di kanan</p>
+        </div>
+        <div class="gallery-card" onclick="selectTemplate('sd_petualangan_cerita')">
+          <div class="gallery-emoji">📖</div>
+          <div class="gallery-name">Petualangan Cerita</div>
+          <div class="gallery-level sd-badge">SD</div>
+          <p class="gallery-desc">RPG edukatif dengan cerita yang menarik</p>
+        </div>
+        <div class="gallery-card" onclick="selectTemplate('sd_tarik_tambang')">
+          <div class="gallery-emoji">🪢</div>
+          <div class="gallery-name">Tarik Tambang</div>
+          <div class="gallery-level sd-badge">SD</div>
+          <p class="gallery-desc">Jawab soal untuk menarik tali ke sisimu!</p>
+        </div>
+        <div class="gallery-card" onclick="selectTemplate('tk_mencocokkan_garis')">
+          <div class="gallery-emoji">🌸</div>
+          <div class="gallery-name">Hubungkan Garis</div>
+          <div class="gallery-level tk-badge">TK</div>
+          <p class="gallery-desc">Cocokkan hewan dengan makanannya dengan klik</p>
+        </div>
+        <div class="gallery-card" onclick="selectTemplate('tk_sortir_warna')">
+          <div class="gallery-emoji">🧺</div>
+          <div class="gallery-name">Sortir Warna</div>
+          <div class="gallery-level tk-badge">TK</div>
+          <p class="gallery-desc">Sortir benda ke keranjang warna yang benar!</p>
+        </div>
+        <div class="gallery-card" onclick="selectTemplate('tk_tebak_suara')">
+          <div class="gallery-emoji">🔍</div>
+          <div class="gallery-name">Detektif Suara</div>
+          <div class="gallery-level tk-badge">TK</div>
+          <p class="gallery-desc">Dengar suaranya, lalu tebak siapa aku!</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══ FOOTER ════════════════════════════════════════════ -->
+  <footer class="site-footer">
+    <div class="footer-content">
+      <div class="footer-logo">🎓 Wadah Guru</div>
+      <p class="footer-tagline">Platform AI Game Edukasi untuk Guru Indonesia</p>
+      <p class="footer-credit">Dirancang &amp; dikembangkan oleh <strong>Zaini Suparlan</strong></p>
+      <p class="footer-powered">Didukung oleh <a href="https://pratama.net" target="_blank" rel="noopener noreferrer" style="color:#f9a825; text-decoration:none; font-weight:700;">pratama.net</a></p>
+    </div>
+  </footer>
+
+  <!-- ═══ JAVASCRIPT ════════════════════════════════════════ -->
+  <script>
+    // ─── Data Preview Game ──────────────────────────────────
+    const GAME_PREVIEWS = {
+      sd_pilihan_ganda: {
+        icon: '📝',
+        title: 'Pilihan Ganda A/B/C/D (Multiple Choice)',
+        desc: 'Soal pilihan ganda klasik dengan 4 opsi A, B, C, D. Dilengkapi tombol dengar suara, skor otomatis, dan feedback animasi emoji.'
+      },
+      sd_flashcard: {
+        icon: '🃏',
+        title: 'Kartu Ajaib (Flashcard)',
+        desc: 'Anak-anak klik kartu untuk melihat jawaban atau penjelasan di baliknya. Cocok untuk hafalan kosakata, terjemahan, rumus, atau fakta sains.'
+      },
+      sd_isian_singkat: {
+        icon: '✏️',
+        title: 'Isian Singkat (Fill in the Blank)',
+        desc: 'Anak-anak melengkapi kalimat yang belum selesai dengan kata yang tepat. Satu soal per layar, cocok untuk semua mata pelajaran.'
+      },
+      sd_labirin: {
+        icon: '🌀',
+        title: 'Labirin Angka (Maze Quiz)',
+        desc: 'Bantu karakter maskot menavigasi labirin 5x5 menuju kotak jawaban yang benar. Memadukan logika dan pengetahuan.'
+      },
+      sd_mencocokkan: {
+        icon: '🤝',
+        title: 'Mencocokkan Pasangan (Matching)',
+        desc: 'Klik item di kolom kiri, lalu klik pasangannya di kolom kanan. Cocok untuk pasangan kata, sinonim, antonim, gambar dan nama, dll.'
+      },
+      sd_petualangan_cerita: {
+        icon: '📖',
+        title: 'Petualangan Cerita (Story Adventure)',
+        desc: 'Game RPG naratif dengan cerita berseri dan pilihan jawaban. Anak-anak menjawab soal untuk melanjutkan petualangan tokoh.'
+      },
+      sd_tarik_tambang: {
+        icon: '🪢',
+        title: 'Tarik Tambang Kuis (Tug of War)',
+        desc: 'Jawab soal dengan benar untuk "menarik" bendera ke sisimu. Visualisasi tali yang bergerak membuat game ini sangat seru!'
+      },
+      tk_mencocokkan_garis: {
+        icon: '🌸',
+        title: 'Hubungkan Garis (Match the Lines)',
+        desc: 'Klik hewan di kiri, lalu klik makanannya di kanan. Cocok untuk TK yang belajar pasangan sederhana dengan emoji besar.'
+      },
+      tk_sortir_warna: {
+        icon: '🧺',
+        title: 'Sortir Warna & Benda (Color Sorting)',
+        desc: 'Benda-benda jatuh dari langit, anak TK memilih keranjang warna yang tepat. Sederhana namun sangat visual dan seru!'
+      },
+      tk_tebak_suara: {
+        icon: '🔍',
+        title: 'Detektif Suara (Sound Detective)',
+        desc: 'Dengarkan deskripsi suara yang dibacakan robot, lalu tebak dengan memilih emoji yang benar. Menggunakan Text-to-Speech bawaan browser.'
+      }
+    };
+
+    // ─── DOM Elements ───────────────────────────────────────
+    const form = document.getElementById('gameForm');
+    const btnGenerate = document.getElementById('btnGenerate');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const successToast = document.getElementById('successToast');
+    const errorToast = document.getElementById('errorToast');
+    const templateSelect = document.getElementById('templateKey');
+    const gamePreview = document.getElementById('gamePreview');
+    const keywordsInput = document.getElementById('keywords');
+    const charCount = document.getElementById('charCount');
+
+    // ─── Session ID (Isolasi Riwayat per Sekolah) ───────────
+    // Setiap perangkat/browser mendapat ID unik permanen
+    // Riwayat hanya bisa diakses dari perangkat yang sama
+    const SESSION_ID = (() => {
+      let sid = localStorage.getItem('wg_session_id');
+      if (!sid) {
+        sid = 'wg_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
+        localStorage.setItem('wg_session_id', sid);
+      }
+      return sid;
+    })();
+
+    // ─── Char Counter ───────────────────────────────────────
+    keywordsInput.addEventListener('input', () => {
+      charCount.textContent = keywordsInput.value.length;
+    });
+
+    // ─── Asisten Kata Kunci AI (Prompt Refiner) ──────────────
+    async function handleRefinePrompt() {
+      const shortTopicInput = document.getElementById('shortTopic');
+      const topic = shortTopicInput.value.trim();
+
+      if (!topic) {
+        shortTopicInput.classList.add('input-error');
+        shortTopicInput.focus();
+        showToast('error', 'Materi Singkat Kosong', 'Ketikkan materi singkat terlebih dahulu (misal: Perkalian Kelas 2).');
+        return;
+      }
+
+      shortTopicInput.classList.remove('input-error');
+      const btnRefine = document.getElementById('btnRefinePrompt');
+      const btnIcon = document.getElementById('refineBtnIcon');
+      const btnText = document.getElementById('refineBtnText');
+      const resultArea = document.getElementById('assistantResultArea');
+      const resultTextarea = document.getElementById('refinedPromptResult');
+
+      btnRefine.disabled = true;
+      if (btnIcon) btnIcon.textContent = '⏳';
+      if (btnText) btnText.textContent = 'AI Sedang Merangkai Cerita...';
+
+      try {
+        const response = await fetch('/api/refine-prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic })
+        });
+
+        btnRefine.disabled = false;
+        if (btnIcon) btnIcon.textContent = '✨';
+        if (btnText) btnText.textContent = 'Rangkai Kata Kunci Otomatis';
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({ error: 'Gagal menghubungi server' }));
+          showToast('error', 'Gagal Merangkai', errData.error || errData.detail || 'Terjadi kesalahan.');
+          return;
+        }
+
+        const data = await response.json();
+        resultTextarea.value = data.refinedPrompt;
+        resultArea.style.display = 'block';
+        resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      } catch (err) {
+        btnRefine.disabled = false;
+        if (btnIcon) btnIcon.textContent = '✨';
+        if (btnText) btnText.textContent = 'Rangkai Kata Kunci Otomatis';
+        console.error('Refine prompt error:', err);
+        showToast('error', 'Koneksi Gagal', 'Tidak dapat terhubung ke server.');
+      }
+    }
+
+    function handleCopyRefinedToMain() {
+      const resultTextarea = document.getElementById('refinedPromptResult');
+      const textToCopy = resultTextarea.value.trim();
+
+      if (!textToCopy) return;
+
+      keywordsInput.value = textToCopy;
+      charCount.textContent = textToCopy.length;
+      keywordsInput.focus();
+      
+      keywordsInput.classList.add('highlight-pulse');
+      setTimeout(() => keywordsInput.classList.remove('highlight-pulse'), 800);
+      
+      updateStepIndicator();
+      showToast('success', 'Berhasil Disalin!', 'Kata kunci AI telah dimasukkan ke Kotak Utama. Anda bisa mengeditnya lagi.');
+    }
+
+    // ─── Template Preview ────────────────────────────────────
+    templateSelect.addEventListener('change', () => {
+      const key = templateSelect.value;
+      if (key && GAME_PREVIEWS[key]) {
+        const info = GAME_PREVIEWS[key];
+        document.getElementById('previewIcon').textContent = info.icon;
+        document.getElementById('previewTitle').textContent = info.title;
+        document.getElementById('previewDesc').textContent = info.desc;
+        gamePreview.style.display = 'flex';
+        gamePreview.classList.add('slide-in');
+      } else {
+        gamePreview.style.display = 'none';
+      }
+      updateStepIndicator();
+    });
+
+    // ─── Quick Tag ──────────────────────────────────────────
+    function setKeyword(text) {
+      keywordsInput.value = text;
+      charCount.textContent = text.length;
+      keywordsInput.focus();
+      keywordsInput.classList.add('highlight-pulse');
+      setTimeout(() => keywordsInput.classList.remove('highlight-pulse'), 600);
+      updateStepIndicator();
+    }
+
+    // ─── Select Template from Gallery ───────────────────────
+    function selectTemplate(key) {
+      templateSelect.value = key;
+      templateSelect.dispatchEvent(new Event('change'));
+      document.getElementById('generator-form-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // ─── Step Indicator Update ──────────────────────────────
+    function updateStepIndicator() {
+      const step1 = document.getElementById('namaGuru').value &&
+                    document.getElementById('waliKelas').value &&
+                    document.getElementById('kelas').value;
+      const step2 = templateSelect.value;
+      const step3 = keywordsInput.value.trim();
+
+      ['step-indicator-1','step-indicator-2','step-indicator-3','step-indicator-4'].forEach((id, i) => {
+        document.getElementById(id).classList.remove('active', 'done');
+      });
+
+      if (!step1) {
+        document.getElementById('step-indicator-1').classList.add('active');
+      } else if (!step2) {
+        document.getElementById('step-indicator-1').classList.add('done');
+        document.getElementById('step-indicator-2').classList.add('active');
+      } else if (!step3) {
+        document.getElementById('step-indicator-1').classList.add('done');
+        document.getElementById('step-indicator-2').classList.add('done');
+        document.getElementById('step-indicator-3').classList.add('active');
+      } else {
+        document.getElementById('step-indicator-1').classList.add('done');
+        document.getElementById('step-indicator-2').classList.add('done');
+        document.getElementById('step-indicator-3').classList.add('done');
+        document.getElementById('step-indicator-4').classList.add('active');
+      }
+    }
+
+    ['namaGuru','waliKelas','kelas'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateStepIndicator);
+    });
+    keywordsInput.addEventListener('input', updateStepIndicator);
+
+    // ─── Loading Steps Animation ─────────────────────────────
+    let loadingTimer = null;
+    function animateLoadingSteps() {
+      const steps = ['ls1','ls2','ls3','ls4'];
+      let current = 0;
+      document.getElementById('ls1').classList.add('active');
+
+      loadingTimer = setInterval(() => {
+        if (current < steps.length - 1) {
+          document.getElementById(steps[current]).classList.remove('active');
+          document.getElementById(steps[current]).classList.add('done');
+          current++;
+          document.getElementById(steps[current]).classList.add('active');
+        }
+      }, 4000);
+    }
+
+    function resetLoadingSteps() {
+      clearInterval(loadingTimer);
+      ['ls1','ls2','ls3','ls4'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.remove('active','done');
+      });
+      document.getElementById('ls1').classList.add('active');
+    }
+
+    // ─── Show Toast ──────────────────────────────────────────
+    function showToast(type, title, msg) {
+      const toastId = type === 'success' ? 'successToast' : 'errorToast';
+      const toast = document.getElementById(toastId);
+      if (type === 'error') {
+        document.getElementById('errorTitle').textContent = title;
+        document.getElementById('errorMsg').textContent = msg;
+      }
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 5000);
+    }
+
+    // ─── Form Submit ─────────────────────────────────────────
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Validasi sederhana
+      const requiredFields = ['namaGuru','waliKelas','kelas','templateKey','keywords'];
+      let isValid = true;
+
+      requiredFields.forEach(fieldId => {
+        const el = document.getElementById(fieldId);
+        if (!el.value.trim()) {
+          el.classList.add('input-error');
+          el.focus();
+          isValid = false;
+        } else {
+          el.classList.remove('input-error');
+        }
+      });
+
+      if (!isValid) {
+        showToast('error', 'Form Belum Lengkap', 'Harap isi semua field yang bertanda bintang merah (*)');
+        return;
+      }
+
+      // Show loading
+      loadingOverlay.classList.add('active');
+      btnGenerate.disabled = true;
+      resetLoadingSteps();
+      animateLoadingSteps();
+
+      const formData = {
+        namaGuru:    document.getElementById('namaGuru').value.trim(),
+        waliKelas:   document.getElementById('waliKelas').value.trim(),
+        kelas:       document.getElementById('kelas').value.trim(),
+        templateKey: document.getElementById('templateKey').value,
+        keywords:    document.getElementById('keywords').value.trim(),
+        sessionId:   SESSION_ID
+      };
+
+      try {
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+
+        // Hide loading
+        loadingOverlay.classList.remove('active');
+        btnGenerate.disabled = false;
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({ error: 'Gagal membaca respons server' }));
+          showToast('error', 'Gagal Generate Game', errData.error || 'Silakan coba lagi.');
+          return;
+        }
+
+        // Trigger download file
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition') || '';
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        const filename = filenameMatch ? filenameMatch[1] : 'game_edukasi.html';
+
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+
+        showToast('success');
+
+        // Refresh riwayat game
+        loadDownloads();
+
+        // Konfeti efek ringan
+        triggerConfetti();
+
+      } catch (err) {
+        loadingOverlay.classList.remove('active');
+        btnGenerate.disabled = false;
+        console.error('Fetch error:', err);
+        showToast('error', 'Koneksi Gagal', 'Tidak dapat terhubung ke server. Pastikan server berjalan.');
+      }
+    });
+
+    // ─── Remove input-error on input ────────────────────────
+    document.querySelectorAll('.input-field').forEach(el => {
+      el.addEventListener('input', () => el.classList.remove('input-error'));
+      el.addEventListener('change', () => el.classList.remove('input-error'));
+    });
+
+    // ─── Mini Confetti ───────────────────────────────────────
+    function triggerConfetti() {
+      const colors = ['#FFD700','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD'];
+      const confettiCount = 60;
+
+      for (let i = 0; i < confettiCount; i++) {
+        const conf = document.createElement('div');
+        conf.style.cssText = `
+          position: fixed;
+          top: -10px;
+          left: ${Math.random() * 100}vw;
+          width: ${Math.random() * 10 + 6}px;
+          height: ${Math.random() * 10 + 6}px;
+          background: ${colors[Math.floor(Math.random() * colors.length)]};
+          border-radius: ${Math.random() > 0.5 ? '50%' : '0'};
+          z-index: 99999;
+          pointer-events: none;
+          animation: confettiFall ${Math.random() * 2 + 2}s ease-in forwards;
+          animation-delay: ${Math.random() * 1}s;
+        `;
+        document.body.appendChild(conf);
+        setTimeout(() => conf.remove(), 4000);
+      }
+    }
+
+    // Init step indicator
+    updateStepIndicator();
+
+    // ─── Load Riwayat Game ────────────────────────────────────
+    async function loadDownloads() {
+      try {
+        const resp = await fetch('/api/downloads?session=' + encodeURIComponent(SESSION_ID));
+        const files = await resp.json();
+        const container = document.getElementById('downloadsList');
+        const emptyMsg  = document.getElementById('downloadsEmpty');
+        const badge     = document.getElementById('downloadsBadge');
+
+        badge.textContent = files.length || '';
+        badge.style.display = files.length ? 'inline-flex' : 'none';
+
+        if (!files.length) {
+          container.innerHTML = '';
+          emptyMsg.style.display = 'block';
+          return;
+        }
+
+        emptyMsg.style.display = 'none';
+        container.innerHTML = files.map(f => {
+          const date = new Date(f.createdAt);
+          const label = date.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' }) +
+                        ' ' + date.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' });
+          const sizeKb = (f.size / 1024).toFixed(0);
+          const nameParts = f.filename.replace('.html','').split('_');
+          const displayName = nameParts.slice(0, 4).join(' ').replace(/([A-Z])/g, ' $1');
+          return `
+            <div class="dl-item" id="dl-${encodeURIComponent(f.filename)}">
+              <div class="dl-icon">🎮</div>
+              <div class="dl-info">
+                <div class="dl-name" title="${f.filename}">${f.filename.replace('.html','')}</div>
+                <div class="dl-meta">${label} &bull; ${sizeKb} KB</div>
+              </div>
+              <div class="dl-actions">
+                <a href="${f.url}" download="${f.filename}" class="btn-dl-download" title="Unduh Ulang">⬇️</a>
+                <button onclick="deleteGame('${f.filename}')" class="btn-dl-delete" title="Hapus">🗑️</button>
+              </div>
+            </div>`;
+        }).join('');
+      } catch(e) {
+        console.warn('Gagal load riwayat:', e);
+      }
+    }
+
+    async function deleteGame(filename) {
+      if (!confirm(`Hapus file "${filename}"?`)) return;
+      try {
+        await fetch('/api/downloads/' + encodeURIComponent(SESSION_ID) + '/' + encodeURIComponent(filename), { method: 'DELETE' });
+        loadDownloads();
+      } catch(e) {
+        alert('Gagal menghapus file.');
+      }
+    }
+
+    // Load riwayat saat halaman pertama kali dibuka
+    loadDownloads();
+  </script>
+
+  <!-- Confetti animation keyframes (injected once) -->
+  <style>
+    @keyframes confettiFall {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+  </style>
+
+</body>
+</html>
