@@ -144,8 +144,8 @@
 
           <div class="input-grid">
 
-            <!-- 🔑 KODE LISENSI — posisi paling atas, sebelum nama guru -->
-            <div class="input-group input-group-full">
+            <!-- 🔑 KODE LISENSI SEKOLAH (2 Kolom Bersama Nama Guru) -->
+            <div class="input-group">
               <label class="input-label" for="kodeLisensi">
                 <span class="label-icon">🔑</span> Kode Lisensi Sekolah
                 <span class="required-star">*</span>
@@ -155,15 +155,16 @@
                 id="kodeLisensi"
                 name="kodeLisensi"
                 class="input-field"
-                placeholder="Contoh: WG-SMP1MAJUJAYA-4729"
+                placeholder="cth: WG-SMP1MAJU-4729"
                 maxlength="40"
                 required
                 autocomplete="off"
-                style="text-transform:uppercase; letter-spacing:1.5px; font-family: 'Courier New', monospace; font-size:14px; font-weight:700;"
+                style="text-transform:uppercase; letter-spacing:1px; font-family: 'Courier New', monospace; font-size:13px; font-weight:700;"
               >
-              <div class="input-hint">🔐 Kode diberikan oleh Admin Wadah Guru. Tersimpan otomatis &amp; tidak perlu diketik ulang.</div>
+              <div class="input-hint">🔑 Kode dari Admin (Tersimpan otomatis)</div>
             </div>
 
+            <!-- ✍️ NAMA GURU -->
             <div class="input-group">
               <label class="input-label" for="namaGuru">
                 <span class="label-icon">✍️</span> Nama Guru / Pembuat
@@ -179,9 +180,10 @@
                 required
                 autocomplete="name"
               >
-              <div class="input-hint">Nama akan muncul sebagai kredit di game</div>
+              <div class="input-hint">Nama kredit di halaman game</div>
             </div>
 
+            <!-- 🏫 WALI KELAS -->
             <div class="input-group">
               <label class="input-label" for="waliKelas">
                 <span class="label-icon">🏫</span> Wali Kelas
@@ -198,7 +200,8 @@
               >
             </div>
 
-            <div class="input-group input-group-full">
+            <!-- 📚 TINGKAT KELAS -->
+            <div class="input-group">
               <label class="input-label" for="kelas">
                 <span class="label-icon">📚</span> Tingkat Kelas
                 <span class="required-star">*</span>
@@ -208,11 +211,11 @@
                 id="kelas"
                 name="kelas"
                 class="input-field"
-                placeholder="cth: Kelas 3 SD, Kelas 5 SD, TK-A, TK-B"
+                placeholder="cth: Kelas 3 SD, TK-A"
                 maxlength="50"
                 required
               >
-              <div class="input-hint">Tingkat kelas menentukan tingkat kesulitan soal yang dibuat AI</div>
+              <div class="input-hint">Menentukan tingkat kesulitan AI</div>
             </div>
 
           </div>
