@@ -30,6 +30,221 @@
   text-decoration: underline;
 }
 
+/* ─── Accordion Banner Kemitraan (Teks Berjalan) ──────────── */
+.wg-accordion-wrap {
+  background: linear-gradient(135deg, #0a192f 0%, #0f2b48 50%, #0a192f 100%);
+  border: 1px solid rgba(144, 205, 244, 0.25);
+  border-radius: 16px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+  margin-bottom: 24px;
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+}
+
+.wg-accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 12px 24px;
+  text-align: left;
+  transition: background 0.2s;
+  font-family: 'Poppins', sans-serif;
+  overflow: hidden;
+}
+
+.wg-accordion-trigger:hover {
+  background: rgba(144, 205, 244, 0.08);
+}
+
+.wg-badge-pulse {
+  background: linear-gradient(135deg, #e53e3e 0%, #dd6b20 100%);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(229, 62, 62, 0.5);
+  animation: badgeGlow 2s infinite alternate;
+}
+
+@keyframes badgeGlow {
+  0% { transform: scale(1); box-shadow: 0 0 8px rgba(229, 62, 62, 0.4); }
+  100% { transform: scale(1.05); box-shadow: 0 0 15px rgba(221, 107, 32, 0.8); }
+}
+
+/* Container Teks Berjalan */
+.wg-marquee-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  white-space: nowrap;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 4%, #000 96%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 4%, #000 96%, transparent 100%);
+}
+
+.wg-marquee-content {
+  display: inline-block;
+  white-space: nowrap;
+  padding-left: 100%;
+  animation: wgMarquee 22s linear infinite;
+  font-size: 0.85rem;
+  color: #e2e8f0;
+}
+
+.wg-marquee-content strong {
+  color: #fbd38d;
+}
+
+.wg-accordion-trigger:hover .wg-marquee-content {
+  animation-play-state: paused;
+}
+
+@keyframes wgMarquee {
+  0%   { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-100%, 0, 0); }
+}
+
+.wg-accordion-caret-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 4px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.2s;
+}
+
+.wg-accordion-trigger:hover .wg-accordion-caret-wrap {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.wg-caret-text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #90cdf4;
+}
+
+.wg-accordion-caret {
+  font-size: 0.9rem;
+  color: #90cdf4;
+  transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+}
+
+.wg-accordion-caret.open {
+  transform: rotate(180deg);
+}
+
+/* Body Accordion Saat Terbuka */
+.wg-accordion-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.45s cubic-bezier(.4,0,.2,1);
+}
+
+.wg-accordion-body.open {
+  max-height: 600px;
+}
+
+.wg-accordion-content {
+  padding: 10px 24px 24px;
+  border-top: 1px solid rgba(144, 205, 244, 0.15);
+}
+
+.text-center-wrap {
+  text-align: center;
+}
+
+.wg-banner-headline {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #90cdf4;
+  margin: 14px 0 8px;
+}
+
+.wg-banner-subheadline {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fbd38d;
+  margin: 14px 0 6px;
+}
+
+.wg-banner-text {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.86rem;
+  color: rgba(226, 232, 240, 0.9);
+  line-height: 1.7;
+  max-width: 900px;
+  margin: 0 auto 8px;
+}
+
+.wg-banner-text strong {
+  color: #fbd38d;
+}
+
+.wg-banner-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(144, 205, 244, 0.3), transparent);
+  margin: 16px auto;
+  max-width: 600px;
+}
+
+.wg-btn-center-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* Tombol Mitra Mandiri */
+.wg-btn-mitra {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 26px;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: 12px;
+  text-decoration: none;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 18px rgba(16, 185, 129, 0.4);
+  letter-spacing: 0.02em;
+}
+
+.wg-btn-mitra:hover {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  color: #064e3b;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(52, 211, 153, 0.6);
+  text-decoration: none;
+}
+
+.wg-btn-mitra:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 600px) {
+  .wg-accordion-trigger { padding: 12px 16px; }
+  .wg-accordion-content { padding: 0 16px 18px; }
+  .wg-accordion-title   { font-size: 0.75rem; }
+  .wg-btn-mitra         { width: 100%; justify-content: center; }
+}
+
 /* ─── CSS Variables / Design Tokens ──────────────────────── */
 :root {
   --primary:        #6C63FF;

@@ -43,7 +43,7 @@
         langsung dari kelas ke tangan murid 🚀
       </p>
       <div class="hero-badges">
-        <span class="badge">✨ Gratis Selamanya</span>
+        <span class="badge">🏫 Multi-Tenant Berlisensi</span>
         <span class="badge">📴 Offline Ready</span>
         <span class="badge">🧠 Generator Cerdas</span>
         <span class="badge">🎮 9 Jenis Game</span>
@@ -53,6 +53,56 @@
 
   <!-- ═══ MAIN CONTENT ══════════════════════════════════════ -->
   <main class="main-container">
+
+    <!-- ═══ ACCORDION BANNER KEMITRAAN (TEKS BERJALAN) ═════════ -->
+    <div class="wg-accordion-wrap" id="wgAccordionWrap">
+      <button
+        class="wg-accordion-trigger"
+        id="wgAccordionBtn"
+        onclick="toggleWgAccordion()"
+        aria-expanded="false"
+        aria-controls="wgAccordionBody"
+      >
+        <span class="wg-badge-pulse">📢 INFO KEMITRAAN</span>
+        <div class="wg-marquee-container" id="wgMarqueeContainer">
+          <div class="wg-marquee-content" id="wgMarqueeContent">
+            <span>✨ <strong>Wadah Guru 100% Gratis!</strong> Diatur Sistem Kuota Berbagi. ⚡ Butuh Kapasitas Kuota Besar &amp; Prioritas Server Sekolah? 🚀 <strong>Klik di sini untuk info Mitra Mandiri &amp; Sponsorship!</strong> ✨</span>
+          </div>
+        </div>
+        <span class="wg-accordion-caret-wrap">
+          <span class="wg-caret-text" id="wgCaretText">Klik Detail</span>
+          <span class="wg-accordion-caret" id="wgAccordionCaret">▾</span>
+        </span>
+      </button>
+      <div class="wg-accordion-body" id="wgAccordionBody" aria-hidden="true">
+        <div class="wg-accordion-content text-center-wrap">
+          <p class="wg-banner-headline">Wadah Guru — Akses AI untuk Pendidikan Indonesia 🇮🇩</p>
+          <p class="wg-banner-text">
+            Aplikasi ini <strong>100% Bebas Biaya</strong> untuk mendukung kreativitas guru di seluruh Indonesia.
+            Karena komputasi AI menggunakan server bersama, penggunaan harian diatur dalam
+            <strong>Sistem Kuota Berbagi</strong> agar performa tetap stabil bagi semua pengguna.
+          </p>
+          <div class="wg-banner-divider"></div>
+          <p class="wg-banner-subheadline">🏅 Butuh Kapasitas Kuota Besar &amp; Akses Lebih Banyak?</p>
+          <p class="wg-banner-text">
+            Sekolah Anda dapat bergabung dalam program <strong>Mitra Mandiri</strong> atau <strong>Sponsorship</strong>
+            untuk membuka <strong>Akses Jalur Khusus (Dedicated License)</strong>. Dengan skema ini, sekolah Anda
+            akan mendapatkan alokasi kuota yang jauh lebih besar dan prioritas jaringan server mandiri yang
+            terpisah dari kuota umum. Mari gunakan teknologi ini secara bijak demi efisiensi dan kenyamanan bersama. 🖥️✨
+          </p>
+          <div class="wg-btn-center-wrap">
+            <a
+              href="https://t.me/Zaini_suparlan?text=Halo%20Admin%20Wadah%20Guru%2C%20sekolah%20kami%20tertarik%20untuk%20bergabung%20dalam%20program%20Mitra%20Mandiri%20(Sponsorship)%20agar%20mendapatkan%20alokasi%20kuota%20yang%20lebih%20besar.%20Mohon%20informasi%20langkah%20aktivasi%20dan%20metode%20pembayarannya.%20Terima%20kasih."
+              target="_blank"
+              rel="noopener noreferrer"
+              class="wg-btn-mitra"
+            >
+              🚀 Gabung Program Mitra Mandiri
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ── STEP INDICATOR ─────────────────────────────────── -->
     <div class="step-indicator">
@@ -93,6 +143,27 @@
           </div>
 
           <div class="input-grid">
+
+            <!-- 🔑 KODE LISENSI — posisi paling atas, sebelum nama guru -->
+            <div class="input-group input-group-full">
+              <label class="input-label" for="kodeLisensi">
+                <span class="label-icon">🔑</span> Kode Lisensi Sekolah
+                <span class="required-star">*</span>
+              </label>
+              <input
+                type="text"
+                id="kodeLisensi"
+                name="kodeLisensi"
+                class="input-field"
+                placeholder="Contoh: WG-SMP1MAJUJAYA-4729"
+                maxlength="40"
+                required
+                autocomplete="off"
+                style="text-transform:uppercase; letter-spacing:1.5px; font-family: 'Courier New', monospace; font-size:14px; font-weight:700;"
+              >
+              <div class="input-hint">🔐 Kode diberikan oleh Admin Wadah Guru. Tersimpan otomatis &amp; tidak perlu diketik ulang.</div>
+            </div>
+
             <div class="input-group">
               <label class="input-label" for="namaGuru">
                 <span class="label-icon">✍️</span> Nama Guru / Pembuat
@@ -143,6 +214,7 @@
               >
               <div class="input-hint">Tingkat kelas menentukan tingkat kesulitan soal yang dibuat AI</div>
             </div>
+
           </div>
         </section>
 
@@ -464,6 +536,9 @@
       <p class="footer-tagline">Platform AI Game Edukasi untuk Guru Indonesia</p>
       <p class="footer-credit">Dirancang &amp; dikembangkan oleh <strong>Zaini Suparlan</strong></p>
       <p class="footer-powered">Didukung oleh <a href="https://pratama.net" target="_blank" rel="noopener noreferrer" style="color:#f9a825; text-decoration:none; font-weight:700;">pratama.net</a></p>
+      <p style="margin-top: 10px; font-size: 0.78rem;">
+        <a href="/admin.html" target="_blank" style="color: rgba(255,255,255,0.45); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#90cdf4'" onmouseout="this.style.color='rgba(255,255,255,0.45)'">🔐 Portal Admin Sekolah</a>
+      </p>
     </div>
   </footer>
 
@@ -544,6 +619,16 @@
         localStorage.setItem('wg_session_id', sid);
       }
       return sid;
+    })();
+
+    // ─── Auto-load Kode Lisensi dari localStorage ───────────
+    // Guru tidak perlu ketik ulang kode tiap membuka halaman
+    (() => {
+      const savedKode = localStorage.getItem('wg_kode_lisensi');
+      if (savedKode) {
+        const el = document.getElementById('kodeLisensi');
+        if (el) el.value = savedKode;
+      }
     })();
 
     // ─── Char Counter ───────────────────────────────────────
@@ -732,7 +817,7 @@
       e.preventDefault();
 
       // Validasi sederhana
-      const requiredFields = ['namaGuru','waliKelas','kelas','templateKey','keywords'];
+      const requiredFields = ['namaGuru','waliKelas','kelas','templateKey','keywords','kodeLisensi'];
       let isValid = true;
 
       requiredFields.forEach(fieldId => {
@@ -757,13 +842,18 @@
       resetLoadingSteps();
       animateLoadingSteps();
 
+      const kodeInput = document.getElementById('kodeLisensi').value.trim().toUpperCase();
+      // Simpan lisensi ke localStorage agar tidak perlu isi ulang
+      localStorage.setItem('wg_kode_lisensi', kodeInput);
+
       const formData = {
-        namaGuru:    document.getElementById('namaGuru').value.trim(),
-        waliKelas:   document.getElementById('waliKelas').value.trim(),
-        kelas:       document.getElementById('kelas').value.trim(),
-        templateKey: document.getElementById('templateKey').value,
-        keywords:    document.getElementById('keywords').value.trim(),
-        sessionId:   SESSION_ID
+        namaGuru:              document.getElementById('namaGuru').value.trim(),
+        waliKelas:             document.getElementById('waliKelas').value.trim(),
+        kelas:                 document.getElementById('kelas').value.trim(),
+        templateKey:           document.getElementById('templateKey').value,
+        keywords:              document.getElementById('keywords').value.trim(),
+        sessionId:             SESSION_ID,
+        kode_lisensi_sekolah:  kodeInput
       };
 
       try {
@@ -773,13 +863,14 @@
           body: JSON.stringify(formData)
         });
 
-        // Hide loading
+        // Hide loading overlay
         loadingOverlay.classList.remove('active');
-        btnGenerate.disabled = false;
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({ error: 'Gagal membaca respons server' }));
           showToast('error', 'Gagal Generate Game', errData.error || 'Silakan coba lagi.');
+          // Cooldown 5 detik sebelum tombol aktif kembali (anti-spam)
+          unlockGenerateBtn(5);
           return;
         }
 
@@ -799,26 +890,72 @@
         URL.revokeObjectURL(url);
 
         showToast('success');
-
-        // Refresh riwayat game
         loadDownloads();
-
-        // Konfeti efek ringan
         triggerConfetti();
+
+        // Cooldown 5 detik setelah berhasil
+        unlockGenerateBtn(5);
 
       } catch (err) {
         loadingOverlay.classList.remove('active');
-        btnGenerate.disabled = false;
         console.error('Fetch error:', err);
         showToast('error', 'Koneksi Gagal', 'Tidak dapat terhubung ke server. Pastikan server berjalan.');
+        unlockGenerateBtn(5);
       }
     });
+
+    // ─── Unlock Generate Button (Cooldown Anti-Spam) ─────────
+    function unlockGenerateBtn(delaySec) {
+      const btn = document.getElementById('btnGenerate');
+      const btnText = btn.querySelector('.btn-text');
+      const btnSub  = btn.querySelector('.btn-sub');
+      let remaining = delaySec;
+
+      // Ubah teks tombol jadi countdown
+      btn.disabled = true;
+      if (btnText) btnText.textContent = `Siap kembali dalam ${remaining} detik...`;
+      if (btnSub)  btnSub.textContent  = 'Tunggu sebentar sebelum mencetak game berikutnya 🙏';
+
+      const countdown = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(countdown);
+          btn.disabled = false;
+          if (btnText) btnText.textContent = 'Cetak Game Pembelajaran (HTML5)';
+          if (btnSub)  btnSub.textContent  = 'AI akan membuat & mengunduh file .html otomatis';
+        } else {
+          if (btnText) btnText.textContent = `Siap kembali dalam ${remaining} detik...`;
+        }
+      }, 1000);
+    }
 
     // ─── Remove input-error on input ────────────────────────
     document.querySelectorAll('.input-field').forEach(el => {
       el.addEventListener('input', () => el.classList.remove('input-error'));
       el.addEventListener('change', () => el.classList.remove('input-error'));
     });
+
+    // ─── Toggle Accordion Banner Kemitraan ───────────────────
+    function toggleWgAccordion() {
+      const body       = document.getElementById('wgAccordionBody');
+      const caret      = document.getElementById('wgAccordionCaret');
+      const caretText  = document.getElementById('wgCaretText');
+      const btn        = document.getElementById('wgAccordionBtn');
+      const marquee    = document.getElementById('wgMarqueeContent');
+      const isOpen     = body.classList.contains('open');
+
+      body.classList.toggle('open', !isOpen);
+      caret.classList.toggle('open', !isOpen);
+      btn.setAttribute('aria-expanded', String(!isOpen));
+      body.setAttribute('aria-hidden', String(isOpen));
+
+      if (caretText) {
+        caretText.textContent = isOpen ? 'Klik Detail' : 'Tutup Detail';
+      }
+      if (marquee) {
+        marquee.style.animationPlayState = isOpen ? 'running' : 'paused';
+      }
+    }
 
     // ─── Mini Confetti ───────────────────────────────────────
     function triggerConfetti() {

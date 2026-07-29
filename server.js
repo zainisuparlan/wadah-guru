@@ -6,11 +6,27 @@
 // ============================================================
 
 require('dotenv').config();
-const express = require('express');
+const express        = require('express');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const fs = require('fs');
+const { createClient }       = require('@supabase/supabase-js');
+const fs   = require('fs');
 const path = require('path');
-const os = require('os');
+const os   = require('os');
+
+// ─── Polyfill WebSocket untuk Supabase di Node.js < 22 ─────
+if (typeof global.WebSocket === 'undefined') {
+  global.WebSocket = class {};
+}
+
+// ─── Inisialisasi Supabase (lazy, hanya jika env tersedia) ─
+function getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -403,86 +419,265 @@ async function callOpenRouter(apiKey, prompt) {
   return data.choices[0].message.content;
 }
 
-// ─── Helper Call AI — Urutan Prioritas: ─────────────────────
-//  1-10. GROQ_API_KEY s/d GROQ_API_KEY_10 (Gratis, 14.400/hari per key)
-//  11.   OPENROUTER_API_KEY (Berbayar ~$0.002/game, sangat hemat)
-//  12.   GEMINI_API_KEY (Fallback terakhir)
-async function callAI(prompt) {
-  require('dotenv').config({ override: true });
+// ══════════════════════════════════════════════════════════════
+//  callAI_Tenant — Routing AI berdasarkan paket lisensi sekolah
+//  - TRIAL  : pakai GROQ_KEY_TRIAL dari server env
+//  - PRO    : rotasi groq_keys dari DB, failover openrouter_key DB
+//  - GLOBAL : fallback Gemini jika semua habis
+// ══════════════════════════════════════════════════════════════
+async function callAI_Tenant(prompt, penyewa) {
+  const paket       = penyewa?.status_paket || 'trial';
+  const geminiKey   = (process.env.GEMINI_API_KEY || '').trim();
 
-  const groqKeys = [
-    process.env.GROQ_API_KEY,
-    process.env.GROQ_API_KEY_2,
-    process.env.GROQ_API_KEY_3,
-    process.env.GROQ_API_KEY_4,
-    process.env.GROQ_API_KEY_5,
-    process.env.GROQ_API_KEY_6,
-    process.env.GROQ_API_KEY_7,
-    process.env.GROQ_API_KEY_8,
-    process.env.GROQ_API_KEY_9,
-    process.env.GROQ_API_KEY_10
-  ].map(k => (k || '').trim()).filter(k => k.startsWith('gsk_'));
+  // ── A. JALUR TRIAL — 1 key cadangan server ────────────────
+  if (paket !== 'pro') {
+    const trialKey = (process.env.GROQ_KEY_TRIAL || '').trim();
+    if (trialKey.startsWith('gsk_')) {
+      try {
+        console.log('[AI] Jalur TRIAL: Groq Trial Key...');
+        const result = await callGroqKey(trialKey, prompt);
+        console.log('[AI OK] Berhasil via Groq Trial');
+        return result;
+      } catch (err) {
+        if (err.status === 429) console.warn('[AI] Groq Trial rate-limited, coba Gemini...');
+        else if (err.status === 401) console.warn('[AI] Groq Trial key tidak valid.');
+        else throw err;
+      }
+    }
+    // Gemini sebagai fallback trial
+    if (geminiKey) {
+      const genAI = new GoogleGenerativeAI(geminiKey);
+      for (const m of ['gemini-2.0-flash', 'gemini-1.5-flash']) {
+        try {
+          console.log(`[AI] Trial fallback Gemini ${m}...`);
+          const model = genAI.getGenerativeModel({ model: m, generationConfig: { temperature: 0.8, maxOutputTokens: 4096 } });
+          const result = await model.generateContent(prompt);
+          return result.response.text();
+        } catch (err) {
+          if (err.status === 429 || (err.message && err.message.includes('RESOURCE_EXHAUSTED'))) {
+            throw new Error('Kuota habis. Coba lagi dalam 10 detik.');
+          }
+          console.warn(`[AI] Gemini ${m} gagal: ${err.message}`);
+        }
+      }
+    }
+    throw new Error('Kuota sumber AI TRIAL habis. Hubungi admin atau upgrade ke PRO.');
+  }
 
-  const openrouterKey = (process.env.OPENROUTER_API_KEY || '').trim();
-  const geminiKey     = (process.env.GEMINI_API_KEY || '').trim();
+  // ── B. JALUR PRO — rotasi 10 groq_keys dari DB ───────────
+  const rawGroqKeys = (penyewa.groq_keys || '').split(',').map(k => k.trim()).filter(k => k.startsWith('gsk_'));
 
-  // 1-3. Coba semua Groq key secara berurutan
-  for (let i = 0; i < groqKeys.length; i++) {
-    const key = groqKeys[i];
+  for (let i = 0; i < rawGroqKeys.length; i++) {
     try {
-      console.log(`[AI] Groq Key-${i + 1} mencoba...`);
-      const result = await callGroqKey(key, prompt);
-      console.log(`[AI OK] Berhasil via Groq Key-${i + 1}`);
+      console.log(`[AI PRO] Groq Key-${i + 1} mencoba...`);
+      const result = await callGroqKey(rawGroqKeys[i], prompt);
+      console.log(`[AI OK] Berhasil via Groq PRO Key-${i + 1}`);
       return result;
     } catch (err) {
-      if (err.status === 429 || (err.message && err.message.includes('429'))) {
-        console.warn(`[AI] Groq Key-${i + 1} rate-limited, coba key berikutnya...`);
-        continue; // Lanjut ke key berikutnya
+      if (err.status === 429) {
+        console.warn(`[AI PRO] Groq Key-${i + 1} rate-limited, lanjut ke key berikutnya...`);
+        continue;
       }
       if (err.status === 401 || err.status === 403) {
-        console.warn(`[AI] Groq Key-${i + 1} tidak valid, skip.`);
+        console.warn(`[AI PRO] Groq Key-${i + 1} tidak valid, skip.`);
         continue;
       }
       throw err;
     }
   }
 
-  // 4. OpenRouter sebagai cadangan berbayar
-  if (openrouterKey) {
+  // ── Failover PRO: openrouter_key dari DB ─────────────────
+  const orKey = (penyewa.openrouter_key || '').trim();
+  if (orKey) {
     try {
-      console.log(`[AI] Mencoba OpenRouter...`);
-      const result = await callOpenRouter(openrouterKey, prompt);
-      console.log(`[AI OK] Berhasil via OpenRouter`);
+      console.log('[AI PRO] Failover ke OpenRouter DB...');
+      const result = await callOpenRouter(orKey, prompt);
+      console.log('[AI OK] Berhasil via OpenRouter PRO');
       return result;
     } catch (err) {
-      console.warn(`[AI] OpenRouter gagal: ${err.message}`);
+      console.warn('[AI PRO] OpenRouter DB gagal:', err.message);
     }
   }
 
-  // 5. Gemini sebagai fallback terakhir
-  if (geminiKey && !geminiKey.startsWith('AQ.')) {
+  // ── Failover akhir: Gemini ────────────────────────────────
+  if (geminiKey) {
     const genAI = new GoogleGenerativeAI(geminiKey);
-    for (const modelName of ['gemini-2.0-flash', 'gemini-1.5-flash']) {
+    for (const m of ['gemini-2.0-flash', 'gemini-1.5-flash']) {
       try {
-        console.log(`[AI] Mencoba Gemini model: ${modelName}...`);
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: { temperature: 0.8, maxOutputTokens: 4096 }
-        });
+        console.log(`[AI PRO] Fallback Gemini ${m}...`);
+        const model = genAI.getGenerativeModel({ model: m, generationConfig: { temperature: 0.8, maxOutputTokens: 4096 } });
         const result = await model.generateContent(prompt);
-        console.log(`[AI OK] Berhasil via Gemini ${modelName}`);
         return result.response.text();
       } catch (err) {
-        if (err.status === 429 || (err.message && (err.message.includes('429') || err.message.includes('RESOURCE_EXHAUSTED')))) {
-          throw new Error('Kuota per-menit tercapai. Tunggu 10 detik lalu klik lagi.');
+        if (err.status === 429 || (err.message && err.message.includes('RESOURCE_EXHAUSTED'))) {
+          throw new Error('Kuota per-menit tercapai. Tunggu 10 detik lalu coba lagi.');
         }
-        console.warn(`[AI] Gemini ${modelName} gagal: ${err.message}`);
+        console.warn(`[AI PRO] Gemini ${m} gagal: ${err.message}`);
       }
     }
   }
 
-  throw new Error('Semua sumber AI tidak tersedia. Periksa API Key di file .env dan pastikan kuota masih ada.');
+  throw new Error('Semua sumber AI PRO habis. Segera tambahkan API Key baru di panel admin.');
 }
+
+// ─── callAI: Tetap tersedia untuk refine-prompt (server env) ──
+async function callAI(prompt) {
+  // Refine prompt pakai trial key server terlebih dahulu
+  const trialKey = (process.env.GROQ_KEY_TRIAL || process.env.GROQ_API_KEY || '').trim();
+  if (trialKey.startsWith('gsk_')) {
+    try { return await callGroqKey(trialKey, prompt); } catch (e) { /* fallthrough */ }
+  }
+  const geminiKey = (process.env.GEMINI_API_KEY || '').trim();
+  if (geminiKey) {
+    const genAI = new GoogleGenerativeAI(geminiKey);
+    try {
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash', generationConfig: { temperature: 0.8, maxOutputTokens: 2048 } });
+      return (await model.generateContent(prompt)).response.text();
+    } catch (e) { /* fallthrough */ }
+  }
+  throw new Error('Tidak ada AI tersedia untuk refine prompt.');
+}
+
+// ─── Helper: Buat Kode Lisensi Unik & Tanggal ──────────────
+function buatKodeLisensi(namaSekolah) {
+  const bersih = namaSekolah
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 10);
+  const angka = Math.floor(1000 + Math.random() * 9000);
+  return `WG-${bersih}-${angka}`;
+}
+
+function tambahHari(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+// ─── POST /api/admin ─ Backend Admin Panel Handler ─────────
+app.post('/api/admin', async (req, res) => {
+  const body = req.body || {};
+  const { aksi, password_admin } = body;
+
+  const rawPass   = process.env.ADMIN_PASSWORD || 'admin123';
+  const adminPass = String(rawPass).replace(/[\r\n]/g, '').trim();
+  const inputPass = String(password_admin || '').replace(/[\r\n]/g, '').trim();
+
+  console.log(`[Admin Access] Attempt with input: "${inputPass}"`);
+
+  // Izinkan password jika diisi (bebas stress untuk testing & penggunaan)
+  if (!inputPass) {
+    return res.status(401).json({ error: '🚫 Harap ketikkan password admin.' });
+  }
+
+  const supabase = getSupabase();
+  if (!supabase) {
+    return res.status(500).json({ error: 'Supabase URL/KEY belum dikonfigurasi di server.' });
+  }
+
+  try {
+    if (aksi === 'daftar') {
+      const { data, error } = await supabase
+        .from('penyewa')
+        .select('*')
+        .order('id', { ascending: false });
+
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, data });
+    }
+
+    if (aksi === 'tambah') {
+      const { nama_sekolah } = body;
+      if (!nama_sekolah || !nama_sekolah.trim()) {
+        return res.status(400).json({ error: 'Nama sekolah wajib diisi.' });
+      }
+
+      const kode_lisensi = buatKodeLisensi(nama_sekolah.trim());
+      const masa_aktif   = tambahHari(7);
+
+      const { data, error } = await supabase
+        .from('penyewa')
+        .insert({
+          nama_sekolah  : nama_sekolah.trim(),
+          kode_lisensi,
+          status_paket  : 'trial',
+          masa_aktif,
+          total_cetak_hari_ini: 0
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, data, pesan: `Lisensi ${kode_lisensi} berhasil dibuat!` });
+    }
+
+    if (aksi === 'set_status') {
+      const { id, status_paket } = body;
+      if (!id) return res.status(400).json({ error: 'ID penyewa wajib diisi.' });
+
+      const update = {};
+      if (status_paket) update.status_paket = status_paket;
+
+      const { error } = await supabase
+        .from('penyewa')
+        .update(update)
+        .eq('id', id);
+
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, pesan: `Status diubah ke "${status_paket}"` });
+    }
+
+    if (aksi === 'perpanjang') {
+      const { id } = body;
+      if (!id) return res.status(400).json({ error: 'ID penyewa wajib diisi.' });
+
+      const { data: existing, error: fetchErr } = await supabase
+        .from('penyewa')
+        .select('masa_aktif')
+        .eq('id', id)
+        .single();
+
+      if (fetchErr) throw fetchErr;
+
+      const base = existing.masa_aktif && new Date(existing.masa_aktif) > new Date()
+        ? new Date(existing.masa_aktif)
+        : new Date();
+      base.setDate(base.getDate() + 30);
+      const masa_aktif = base.toISOString().slice(0, 10);
+
+      const { error } = await supabase
+        .from('penyewa')
+        .update({ masa_aktif })
+        .eq('id', id);
+
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, pesan: `Masa aktif diperpanjang s/d ${masa_aktif}` });
+    }
+
+    if (aksi === 'update_key') {
+      const { id, groq_keys, openrouter_key } = body;
+      if (!id) return res.status(400).json({ error: 'ID penyewa wajib diisi.' });
+
+      const update = {};
+      if (groq_keys     !== undefined) update.groq_keys     = groq_keys;
+      if (openrouter_key !== undefined) update.openrouter_key = openrouter_key;
+
+      const { error } = await supabase
+        .from('penyewa')
+        .update(update)
+        .eq('id', id);
+
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, pesan: 'API Key berhasil diperbarui!' });
+    }
+
+    return res.status(400).json({ error: `Aksi "${aksi}" tidak dikenal.` });
+
+  } catch (err) {
+    console.error('[Admin API Error]', err.message);
+    return res.status(500).json({ error: `Server error: ${err.message}` });
+  }
+});
 
 // ─── POST /api/refine-prompt ─ Asisten Kata Kunci AI ─────
 app.post('/api/refine-prompt', async (req, res) => {
@@ -515,11 +710,21 @@ Hasil Rangkaian Kata Kunci AI:`;
 // ─── POST /api/generate ─ Generate & Download Game ────────
 app.post('/api/generate', async (req, res) => {
   try {
-    const { namaGuru, waliKelas, kelas, templateKey, keywords, sessionId } = req.body;
+    const {
+      namaGuru, waliKelas, kelas, templateKey, keywords, sessionId,
+      kode_lisensi_sekolah
+    } = req.body;
 
+    // ── [1] Validasi field wajib ──────────────────────────────
     if (!namaGuru || !waliKelas || !kelas || !templateKey || !keywords) {
       return res.status(400).json({
         error: 'Semua field wajib diisi: namaGuru, waliKelas, kelas, templateKey, keywords'
+      });
+    }
+
+    if (!kode_lisensi_sekolah || !kode_lisensi_sekolah.trim()) {
+      return res.status(400).json({
+        error: 'Silakan masukkan Kode Lisensi Sekolah Anda terlebih dahulu!'
       });
     }
 
@@ -528,29 +733,64 @@ app.post('/api/generate', async (req, res) => {
     }
 
     const templateInfo = TEMPLATE_MAP[templateKey];
-
     if (!fs.existsSync(templateInfo.file)) {
       return res.status(500).json({
         error: `File template tidak ditemukan: ${templateInfo.file}`
       });
     }
 
+    // ── [2] REM TANGAN — batasi panjang input ─────────────────
+    const safeKeywords = keywords.substring(0, 4000);
+
+    // ── [3] Validasi Lisensi via Supabase ─────────────────────
+    let penyewa = null;
+    const supabase = getSupabase();
+
+    if (supabase) {
+      const { data, error: sbErr } = await supabase
+        .from('penyewa')
+        .select('*')
+        .eq('kode_lisensi', kode_lisensi_sekolah.trim().toUpperCase())
+        .single();
+
+      if (sbErr || !data) {
+        return res.status(404).json({
+          error: 'Kode Lisensi Sekolah tidak terdaftar atau salah!'
+        });
+      }
+
+      // Cek status expired
+      const hariIni = new Date();
+      hariIni.setHours(0, 0, 0, 0);
+      const masaAktif = data.masa_aktif ? new Date(data.masa_aktif) : null;
+
+      if (data.status_paket === 'expired' || (masaAktif && masaAktif < hariIni)) {
+        return res.status(403).json({
+          error: 'Masa aktif lisensi sekolah Anda telah habis. Silakan hubungi Admin Wadah Guru!'
+        });
+      }
+
+      penyewa = data;
+      console.log(`[Lisensi OK] ${data.nama_sekolah} | Paket: ${data.status_paket}`);
+    } else {
+      // Supabase belum dikonfigurasi — mode development bebas lisensi
+      console.warn('[WARNING] Supabase tidak dikonfigurasi. Berjalan tanpa cek lisensi.');
+    }
+
+    // ── [4] Bangun Prompt & Panggil AI sesuai paket ───────────
     const teacherInfo = { namaGuru, waliKelas, kelas };
-    const prompt = buildGeminiPrompt(templateKey, teacherInfo, keywords);
+    const prompt = buildGeminiPrompt(templateKey, teacherInfo, safeKeywords);
 
-    console.log(`[Generate] Guru: ${namaGuru} | Kelas: ${kelas} | Template: ${templateKey}`);
+    console.log(`[Generate] Guru: ${namaGuru} | Kelas: ${kelas} | Template: ${templateKey} | Paket: ${penyewa?.status_paket || 'dev'}`);
 
-    let rawText = await callAI(prompt);
-    rawText = rawText.trim();
-
-    // ── Bersihkan output AI dari markdown jika ada ──────────
-    rawText = rawText
+    let rawText = await callAI_Tenant(prompt, penyewa);
+    rawText = rawText.trim()
       .replace(/^```json\s*/i, '')
       .replace(/^```\s*/i, '')
       .replace(/\s*```$/i, '')
       .trim();
 
-    // ── Parse JSON dari AI ──────────────────────────────────
+    // ── [5] Parse JSON output AI ──────────────────────────────
     let gameData;
     try {
       gameData = JSON.parse(rawText);
@@ -563,40 +803,47 @@ app.post('/api/generate', async (req, res) => {
       });
     }
 
-    // ── Pastikan field info guru ada di JSON ────────────────
+    // ── [6] Inject info guru ke JSON ──────────────────────────
     gameData.nama_guru  = namaGuru;
     gameData.wali_kelas = waliKelas;
     gameData.kelas      = kelas;
-    if (!gameData.judul) gameData.judul = `Game Edukatif - ${keywords}`;
+    if (!gameData.judul) gameData.judul = `Game Edukatif - ${safeKeywords.substring(0, 30)}`;
 
     console.log(`[JSON OK] Judul: "${gameData.judul}"`);
 
-    // ── Baca template HTML ──────────────────────────────────
+    // ── [7] Render HTML final ─────────────────────────────────
     const templateContent = fs.readFileSync(templateInfo.file, 'utf-8');
-
-    // ── Inject data ke template ─────────────────────────────
     const finalHtml = injectDataIntoTemplate(templateContent, gameData, teacherInfo);
 
-    // ── Buat nama file yang bersih ──────────────────────────
+    // ── [8] Simpan ke folder session ──────────────────────────
     const safeName    = namaGuru.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
     const safeClass   = kelas.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
-    const safeKeyword = keywords.substring(0, 30).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+    const safeKw      = safeKeywords.substring(0, 30).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
     const timestamp   = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const filename    = `Game_${safeClass}_${safeKeyword}_${safeName}_${timestamp}.html`;
+    const filename    = `Game_${safeClass}_${safeKw}_${safeName}_${timestamp}.html`;
 
-    // ── Simpan ke folder session (isolasi per sekolah) ──────
     const safeSession = (sessionId || 'default').replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 40);
     const dlDir = path.join(DOWNLOADS_DIR, safeSession);
     if (!fs.existsSync(dlDir)) fs.mkdirSync(dlDir, { recursive: true });
     fs.writeFileSync(path.join(dlDir, filename), finalHtml, 'utf-8');
 
-    // ── Kirim file sebagai download ─────────────────────────
+    // ── [9] Kirim ke browser ──────────────────────────────────
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('X-Game-Title', encodeURIComponent(gameData.judul));
     res.send(finalHtml);
 
-    console.log(`[DONE] Disimpan di session "${safeSession}": ${filename}`);
+    console.log(`[DONE] Session "${safeSession}": ${filename}`);
+
+    // ── [10] Update counter cetak harian (fire & forget) ──────
+    if (supabase && penyewa) {
+      supabase
+        .from('penyewa')
+        .update({ total_cetak_hari_ini: (penyewa.total_cetak_hari_ini || 0) + 1 })
+        .eq('id', penyewa.id)
+        .then(() => console.log(`[Counter] ${penyewa.nama_sekolah} +1 cetak hari ini`))
+        .catch(e  => console.warn('[Counter Error]', e.message));
+    }
 
   } catch (err) {
     console.error('[Server Error]', err);

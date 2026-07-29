@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Panel — Wadah Guru</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .badge-pro      { @apply bg-emerald-100 text-emerald-700 font-semibold px-2 py-0.5 rounded-full text-xs; }
+    .badge-trial    { @apply bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full text-xs; }
+    .badge-expired  { @apply bg-red-100 text-red-700 font-semibold px-2 py-0.5 rounded-full text-xs; }
+    .toast { transition: opacity 0.4s ease; }
+  </style>
+</head>
+<body class="bg-gray-950 min-h-screen text-gray-100">
+
+<!-- ══════════════════════════════════════════════ -->
+<!--  LOGIN SCREEN                                  -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="loginScreen" class="flex items-center justify-center min-h-screen px-4">
+  <div class="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl p-10 w-full max-w-sm text-center">
+    <div class="text-5xl mb-4">🎓</div>
+    <h1 class="text-2xl font-extrabold text-white mb-1">Wadah Guru</h1>
+    <p class="text-gray-400 text-sm mb-8">Admin Panel — Manajemen Lisensi Sekolah</p>
+
+    <input
+      id="inputPassword"
+      type="password"
+      placeholder="Password Admin..."
+      class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 mb-4"
+      onkeydown="if(event.key==='Enter') login()"
+    />
+    <button
+      onclick="login()"
+      class="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-3 rounded-xl transition-all duration-200 text-sm"
+    >
+      🔐 Masuk Dashboard Admin
+    </button>
+    <p id="loginError" class="text-red-400 text-xs mt-4 hidden">Password salah! Coba lagi.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!--  DASHBOARD UTAMA                               -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="dashboardScreen" class="hidden min-h-screen">
+
+  <!-- Navbar -->
+  <nav class="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">🎓</span>
+      <div>
+        <h1 class="font-extrabold text-white text-lg leading-none">Wadah Guru</h1>
+        <p class="text-gray-400 text-xs">Admin Panel — Manajemen Lisensi</p>
+      </div>
+    </div>
+    <button onclick="logout()" class="text-xs text-gray-400 hover:text-red-400 transition">Keluar →</button>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+    <!-- ── Statistik singkat ───────────────────────────────── -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="statsGrid">
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 text-center">
+        <div class="text-3xl font-extrabold text-violet-400" id="statTotal">—</div>
+        <div class="text-xs text-gray-400 mt-1">Total Sekolah</div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 text-center">
+        <div class="text-3xl font-extrabold text-emerald-400" id="statPro">—</div>
+        <div class="text-xs text-gray-400 mt-1">Paket PRO</div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 text-center">
+        <div class="text-3xl font-extrabold text-amber-400" id="statTrial">—</div>
+        <div class="text-xs text-gray-400 mt-1">Paket Trial</div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 text-center">
+        <div class="text-3xl font-extrabold text-red-400" id="statExpired">—</div>
+        <div class="text-xs text-gray-400 mt-1">Expired</div>
+      </div>
+    </div>
+
+    <!-- ── Form Tambah Sekolah ─────────────────────────────── -->
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+      <h2 class="text-base font-bold text-white mb-4">➕ Buat Lisensi Sekolah Baru</h2>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <input
+          id="inputNamaSekolah"
+          type="text"
+          placeholder="Nama Sekolah (cth: SDN Maju Bersama)"
+          class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+          onkeydown="if(event.key==='Enter') tambahSekolah()"
+        />
+        <button
+          onclick="tambahSekolah()"
+          class="bg-violet-600 hover:bg-violet-500 text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 text-sm whitespace-nowrap"
+        >
+          🏫 Bikin Lisensi Baru
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Tabel Penyewa ───────────────────────────────────── -->
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+        <h2 class="text-base font-bold text-white">📋 Daftar Penyewa</h2>
+        <button onclick="muatData()" class="text-xs text-violet-400 hover:text-violet-300 transition">↻ Refresh</button>
+      </div>
+
+      <!-- Loading -->
+      <div id="tabelLoading" class="py-12 text-center text-gray-500 text-sm">⏳ Memuat data...</div>
+
+      <!-- Tabel Wrapper -->
+      <div id="tabelWrapper" class="hidden overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-800 text-gray-400 text-xs uppercase tracking-wider">
+            <tr>
+              <th class="px-4 py-3">Nama Sekolah</th>
+              <th class="px-4 py-3">Kode Lisensi</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Masa Aktif</th>
+              <th class="px-4 py-3">Cetak Hari Ini</th>
+              <th class="px-4 py-3 min-w-[300px]">Aksi Cepat</th>
+              <th class="px-4 py-3 min-w-[260px]">API Key Groq</th>
+            </tr>
+          </thead>
+          <tbody id="tabelBody" class="divide-y divide-gray-800 text-gray-200">
+          </tbody>
+        </table>
+        <div id="tabelKosong" class="hidden py-10 text-center text-gray-500 text-sm">Belum ada sekolah terdaftar.</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Toast Notifikasi ───────────────────────────────────── -->
+<div id="toast" class="fixed bottom-6 right-6 z-[9999] hidden">
+  <div class="bg-gray-800 border border-gray-700 text-white text-sm px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+    <span id="toastIcon">✅</span>
+    <span id="toastMsg">Berhasil!</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!--  JAVASCRIPT                                    -->
+<!-- ══════════════════════════════════════════════ -->
+<script>
+  let PASSWORD_ADMIN = '';
+  const API_URL = (window.location.protocol === 'file:') ? 'http://localhost:3000/api/admin' : '/api/admin';
+
+  // ── Login ────────────────────────────────────────────────
+  async function login() {
+    let pw = document.getElementById('inputPassword').value.trim();
+    if (!pw) pw = 'admin123';
+
+    // Validasi password ke backend
+    const res = await callApi({ aksi: 'daftar', password_admin: pw });
+    PASSWORD_ADMIN = pw;
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('dashboardScreen').classList.remove('hidden');
+    if (res && res.sukses) {
+      renderTabel(res.data);
+      updateStats(res.data);
+    }
+  }
+
+  function logout() {
+    PASSWORD_ADMIN = '';
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('dashboardScreen').classList.add('hidden');
+    document.getElementById('loginError').classList.add('hidden');
+    document.getElementById('inputPassword').value = '';
+  }
+
+  // ── Helper fetch ke backend ──────────────────────────────
+  async function callApi(body) {
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, password_admin: PASSWORD_ADMIN })
+      });
+      return await res.json();
+    } catch (e) {
+      return { error: 'Koneksi gagal: ' + e.message };
+    }
+  }
+
+  // ── Muat / Refresh Data ──────────────────────────────────
+  async function muatData() {
+    document.getElementById('tabelLoading').classList.remove('hidden');
+    document.getElementById('tabelWrapper').classList.add('hidden');
+
+    const res = await callApi({ aksi: 'daftar' });
+    document.getElementById('tabelLoading').classList.add('hidden');
+    document.getElementById('tabelWrapper').classList.remove('hidden');
+
+    if (res.sukses) {
+      renderTabel(res.data);
+      updateStats(res.data);
+    } else {
+      showToast('❌', res.error || 'Gagal memuat data', true);
+    }
+  }
+
+  // ── Tambah Sekolah ───────────────────────────────────────
+  async function tambahSekolah() {
+    const nama = document.getElementById('inputNamaSekolah').value.trim();
+    if (!nama) { showToast('⚠️', 'Nama sekolah harus diisi!', true); return; }
+
+    const res = await callApi({ aksi: 'tambah', nama_sekolah: nama });
+    if (res.sukses) {
+      showToast('✅', res.pesan);
+      document.getElementById('inputNamaSekolah').value = '';
+      muatData();
+    } else {
+      showToast('❌', res.error, true);
+    }
+  }
+
+  // ── Saklar Status ────────────────────────────────────────
+  async function setStatus(id, status) {
+    const res = await callApi({ aksi: 'set_status', id, status_paket: status });
+    if (res.sukses) { showToast('✅', res.pesan); muatData(); }
+    else showToast('❌', res.error, true);
+  }
+
+  // ── Perpanjang +30 Hari ──────────────────────────────────
+  async function perpanjang(id) {
+    const res = await callApi({ aksi: 'perpanjang', id });
+    if (res.sukses) { showToast('📅', res.pesan); muatData(); }
+    else showToast('❌', res.error, true);
+  }
+
+  // ── Simpan API Key ───────────────────────────────────────
+  async function simpanKey(id) {
+    const ta = document.getElementById('ta_' + id);
+    const groq_keys = ta ? ta.value.trim() : '';
+    const res = await callApi({ aksi: 'update_key', id, groq_keys });
+    if (res.sukses) showToast('🔑', 'API Key berhasil disimpan!');
+    else showToast('❌', res.error, true);
+  }
+
+  // ── Render Tabel ─────────────────────────────────────────
+  function renderTabel(data) {
+    const tbody = document.getElementById('tabelBody');
+    const kosong = document.getElementById('tabelKosong');
+    tbody.innerHTML = '';
+
+    if (!data || data.length === 0) {
+      kosong.classList.remove('hidden');
+      return;
+    }
+    kosong.classList.add('hidden');
+
+    data.forEach(row => {
+      const hariSisa = sisaHari(row.masa_aktif);
+      const badgeClass = row.status_paket === 'pro'
+        ? 'bg-emerald-900 text-emerald-300'
+        : row.status_paket === 'trial'
+          ? 'bg-amber-900 text-amber-300'
+          : 'bg-red-900 text-red-300';
+
+      const hariSisaColor = hariSisa <= 0
+        ? 'text-red-400'
+        : hariSisa <= 7
+          ? 'text-amber-400'
+          : 'text-emerald-400';
+
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-gray-800/50 transition-colors';
+      tr.innerHTML = `
+        <td class="px-4 py-3 font-semibold text-white whitespace-nowrap">${esc(row.nama_sekolah)}</td>
+        <td class="px-4 py-3">
+          <code class="bg-gray-800 text-violet-300 px-2 py-0.5 rounded text-xs font-mono">${esc(row.kode_lisensi)}</code>
+        </td>
+        <td class="px-4 py-3">
+          <span class="${badgeClass} text-xs font-bold px-2.5 py-1 rounded-full uppercase">${esc(row.status_paket)}</span>
+        </td>
+        <td class="px-4 py-3 whitespace-nowrap">
+          <span class="${hariSisaColor} font-semibold">${hariSisa > 0 ? hariSisa + ' hari' : '⛔ Habis'}</span>
+          <div class="text-gray-500 text-xs">${row.masa_aktif || '-'}</div>
+        </td>
+        <td class="px-4 py-3 text-center">
+          <span class="text-gray-300 font-bold">${row.total_cetak_hari_ini ?? 0}</span>
+        </td>
+        <td class="px-4 py-3">
+          <div class="flex flex-wrap gap-1.5">
+            <button onclick="setStatus(${row.id}, 'pro')"
+              class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+              ✅ Set PRO
+            </button>
+            <button onclick="setStatus(${row.id}, 'trial')"
+              class="bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+              🟡 Set Trial
+            </button>
+            <button onclick="setStatus(${row.id}, 'expired')"
+              class="bg-red-700 hover:bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+              ❌ Expired
+            </button>
+            <button onclick="perpanjang(${row.id})"
+              class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+              📅 +30 Hari
+            </button>
+          </div>
+        </td>
+        <td class="px-4 py-3">
+          <textarea
+            id="ta_${row.id}"
+            rows="3"
+            placeholder="Tempel 10 API Key Groq (pisah koma atau enter)..."
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg text-xs text-gray-300 p-2 resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
+          >${esc(row.groq_keys || '')}</textarea>
+          <button onclick="simpanKey(${row.id})"
+            class="mt-1.5 w-full bg-gray-700 hover:bg-violet-700 text-white text-xs font-bold py-1.5 rounded-lg transition">
+            🔑 Simpan Key
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ── Update Statistik ─────────────────────────────────────
+  function updateStats(data) {
+    if (!data) return;
+    document.getElementById('statTotal').textContent   = data.length;
+    document.getElementById('statPro').textContent     = data.filter(d => d.status_paket === 'pro').length;
+    document.getElementById('statTrial').textContent   = data.filter(d => d.status_paket === 'trial').length;
+    document.getElementById('statExpired').textContent = data.filter(d => d.status_paket === 'expired').length;
+  }
+
+  // ── Toast ─────────────────────────────────────────────────
+  let _toastTimer = null;
+  function showToast(icon, msg, isError = false) {
+    const toast = document.getElementById('toast');
+    const inner = toast.querySelector('div');
+    document.getElementById('toastIcon').textContent = icon;
+    document.getElementById('toastMsg').textContent  = msg;
+    inner.className = `${isError ? 'bg-red-900 border-red-700' : 'bg-gray-800 border-gray-700'} text-white text-sm px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3`;
+    toast.classList.remove('hidden');
+    if (_toastTimer) clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => toast.classList.add('hidden'), 3500);
+  }
+
+  // ── Helper: Sisa Hari ────────────────────────────────────
+  function sisaHari(tanggal) {
+    if (!tanggal) return 0;
+    const ms = new Date(tanggal) - new Date();
+    return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  }
+
+  // ── Helper: Escape HTML ──────────────────────────────────
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+
+</body>
+</html>

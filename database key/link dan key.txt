@@ -1,0 +1,3 @@
+project url : https://xaqembmmgrslzeluftzt.supabase.co
+
+publishsble key : sb_publishable_pVz_ohHkRpwhcT5k6saQnw_n3Vucj_n
