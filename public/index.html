@@ -796,10 +796,6 @@
           body: JSON.stringify({ topic })
         });
 
-        btnRefine.disabled = false;
-        if (btnIcon) btnIcon.textContent = '✨';
-        if (btnText) btnText.textContent = 'Rangkai Kata Kunci Otomatis';
-
         if (!response.ok) {
           const errData = await response.json().catch(() => ({ error: 'Gagal menghubungi server' }));
           showToast('error', 'Gagal Merangkai', errData.error || errData.detail || 'Terjadi kesalahan.');
@@ -812,11 +808,12 @@
         resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
       } catch (err) {
+        console.error('Refine prompt error:', err);
+        showToast('error', 'Koneksi Gagal', 'Tidak dapat terhubung ke server.');
+      } finally {
         btnRefine.disabled = false;
         if (btnIcon) btnIcon.textContent = '✨';
         if (btnText) btnText.textContent = 'Rangkai Kata Kunci Otomatis';
-        console.error('Refine prompt error:', err);
-        showToast('error', 'Koneksi Gagal', 'Tidak dapat terhubung ke server.');
       }
     }
 

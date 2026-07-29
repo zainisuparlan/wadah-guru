@@ -565,20 +565,41 @@ async function callAI_Tenant(prompt, penyewa) {
 
 // ─── callAI: Tetap tersedia untuk refine-prompt (server env) ──
 async function callAI(prompt) {
-  // Refine prompt pakai trial key server terlebih dahulu
-  const trialKey = (process.env.GROQ_KEY_TRIAL || process.env.GROQ_API_KEY || '').trim();
-  if (trialKey.startsWith('gsk_')) {
-    try { return await callGroqKey(trialKey, prompt); } catch (e) { /* fallthrough */ }
+  const rawTrialKeys = [
+    process.env.GROQ_KEY_TRIAL,
+    process.env.GROQ_KEY_TRIAL_2,
+    process.env.GROQ_KEY_TRIAL_3,
+    process.env.GROQ_API_KEY
+  ].filter(Boolean).join(',');
+
+  const trialKeys = rawTrialKeys
+    .split(/[\n,]+/)
+    .map(k => k.trim())
+    .filter(k => k.startsWith('gsk_'));
+
+  for (let i = 0; i < trialKeys.length; i++) {
+    try {
+      console.log(`[Refine AI] Mencoba Groq Key-${i + 1}/${trialKeys.length}...`);
+      return await callGroqKey(trialKeys[i], prompt);
+    } catch (e) {
+      console.warn(`[Refine AI] Groq Key-${i + 1} gagal: ${e.message}`);
+    }
   }
+
   const geminiKey = (process.env.GEMINI_API_KEY || '').trim();
   if (geminiKey) {
     const genAI = new GoogleGenerativeAI(geminiKey);
-    try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash', generationConfig: { temperature: 0.8, maxOutputTokens: 2048 } });
-      return (await model.generateContent(prompt)).response.text();
-    } catch (e) { /* fallthrough */ }
+    for (const m of ['gemini-2.0-flash', 'gemini-1.5-flash']) {
+      try {
+        const model = genAI.getGenerativeModel({ model: m, generationConfig: { temperature: 0.8, maxOutputTokens: 2048 } });
+        return (await model.generateContent(prompt)).response.text();
+      } catch (e) {
+        console.warn(`[Refine AI] Gemini ${m} gagal: ${e.message}`);
+      }
+    }
   }
-  throw new Error('Tidak ada AI tersedia untuk refine prompt.');
+
+  throw new Error('Tidak ada AI tersedia untuk merangkai kata kunci. Pastikan GROQ_KEY_TRIAL terisi di Vercel.');
 }
 
 // ─── Helper: Buat Kode Lisensi Unik & Tanggal ──────────────
