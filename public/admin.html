@@ -4,6 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Panel — Wadah Guru</title>
+
+  <!-- 📱 PWA Support (Installable di Android / Chrome / iOS) -->
+  <meta name="theme-color" content="#030712"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="WG Admin"/>
+  <link rel="manifest" href="/manifest-admin.json"/>
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3429/3429986.png"/>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -191,7 +201,19 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...body, password_admin: PASSWORD_ADMIN })
       });
-      return await res.json();
+      
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (jsonErr) {
+        return { error: '⚠️ Server Vercel Error. Pastikan SUPABASE_URL & SUPABASE_ANON_KEY sudah diset di Vercel Dashboard → Environment Variables.' };
+      }
+
+      if (!res.ok) {
+        return { error: data.error || `Error ${res.status}: Gagal memproses data.` };
+      }
+      return data;
     } catch (e) {
       return { error: 'Koneksi gagal: ' + e.message };
     }
@@ -364,6 +386,13 @@
   // ── Helper: Escape HTML ──────────────────────────────────
   function esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Register PWA Service Worker ──────────────────────────
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
   }
 </script>
 
