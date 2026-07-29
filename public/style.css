@@ -590,6 +590,38 @@ body {
   font-weight: 400;
 }
 
+/* ─── Compact Centered License Box ───────────────────────── */
+.license-box-centered {
+  background: linear-gradient(135deg, #f3f0ff 0%, #eef2ff 100%);
+  border: 1.5px dashed rgba(108, 99, 255, 0.4);
+  border-radius: 16px;
+  padding: 16px 24px;
+  margin: 0 auto 28px auto;
+  max-width: 480px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(108, 99, 255, 0.06);
+}
+
+.input-license-compact {
+  max-width: 320px;
+  margin: 0 auto;
+  text-align: center !important;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px !important;
+  font-weight: 700;
+  background: #ffffff !important;
+  border: 1.5px solid rgba(108, 99, 255, 0.3) !important;
+  color: #4B44CC !important;
+  box-shadow: 0 2px 8px rgba(108, 99, 255, 0.08) !important;
+}
+
+.input-license-compact:focus {
+  border-color: #6C63FF !important;
+  box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.2) !important;
+}
+
 /* ─── Divider ─────────────────────────────────────────────── */
 .section-divider {
   display: flex;
