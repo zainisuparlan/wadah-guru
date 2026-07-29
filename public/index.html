@@ -619,8 +619,6 @@
     const charCount = document.getElementById('charCount');
 
     // ─── Session ID (Isolasi Riwayat per Sekolah) ───────────
-    // Setiap perangkat/browser mendapat ID unik permanen
-    // Riwayat hanya bisa diakses dari perangkat yang sama
     const SESSION_ID = (() => {
       let sid = localStorage.getItem('wg_session_id');
       if (!sid) {
@@ -630,7 +628,7 @@
       return sid;
     })();
 
-    // ─── Cookie & LocalStorage Helper (Persistensi Tahan Restart/Close) ──
+    // ─── Cookie & LocalStorage Helper ───────────────────────
     function setStoredLicense(code) {
       if (code) {
         localStorage.setItem('wg_kode_lisensi', code);
@@ -650,6 +648,24 @@
         }
       }
       return code ? code.trim().toUpperCase() : '';
+    }
+
+    // ─── Trial Unique Device Code Generator ───────────────────
+    function getDeviceTrialCode() {
+      let code = localStorage.getItem('wg_device_trial_code');
+      if (!code) {
+        const match = document.cookie.match(/(?:^|; )wg_device_trial_code=([^;]*)/);
+        if (match) {
+          try { code = decodeURIComponent(match[1]); } catch(e){}
+        }
+      }
+      if (!code || !code.startsWith('WG-FREE-')) {
+        const rand = Math.floor(100000 + Math.random() * 900000);
+        code = 'WG-FREE-' + rand;
+        localStorage.setItem('wg_device_trial_code', code);
+        document.cookie = `wg_device_trial_code=${encodeURIComponent(code)}; max-age=315360000; path=/; SameSite=Lax`;
+      }
+      return code;
     }
 
     // ─── Trial Counter Helper (Max 3x Cetak Gratis) ─────────
@@ -682,12 +698,13 @@
         btn.style.background = 'linear-gradient(135deg, #475569, #334155)';
         btn.style.boxShadow = '0 2px 8px rgba(71, 85, 105, 0.3)';
 
-        hint.innerHTML = `<span style="color: #4f46e5; font-weight: 600;">✅ Lisensi ${code} Terdaftar & Aktif di Browser Ini</span>`;
+        hint.innerHTML = `<span style="color: #4f46e5; font-weight: 600;">✅ Lisensi PRO ${code} Terdaftar & Aktif di Browser Ini</span>`;
       } else if (mode === 'trial') {
+        const trialCode = code || getDeviceTrialCode();
         const used = getTrialPrintsCount();
         const sisa = Math.max(0, MAX_TRIAL_PRINTS - used);
         
-        input.value = 'WG-FREE-TRIAL';
+        input.value = trialCode;
         input.readOnly = true;
         input.style.backgroundColor = '#fef3c7';
         input.style.color = '#78350f';
@@ -699,9 +716,62 @@
         btn.style.boxShadow = '0 2px 8px rgba(217, 119, 6, 0.3)';
 
         if (sisa > 0) {
-          hint.innerHTML = `<span style="color: #d97706; font-weight: 600;">🎁 LISENSI TRIAL GRATIS (Tersisa: ${sisa}/${MAX_TRIAL_PRINTS}x Cetak). Masukkan Kode PRO jika sekolah Anda berlangganan.</span>`;
+          hint.innerHTML = `<span style="color: #d97706; font-weight: 600;">🎁 LISENSI TRIAL GRATIS: ${trialCode} (Tersisa: ${sisa}/${MAX_TRIAL_PRINTS}x Cetak). Masukkan Kode PRO jika berlangganan.</span>`;
         } else {
-          hint.innerHTML = `<span style="color: #dc2626; font-weight: 700;">🔒 Kuota Trial Gratis (3/3) Habis! Masukkan Kode Lisensi PRO untuk lanjut cetak.</span>`;
+          hint.innerHTML = `<span style="color: #dc2626; font-weight: 700;">🔒 Kuota Trial Gratis ${trialCode} (3/3) Habis! Masukkan Kode Lisensi PRO untuk lanjut cetak.</span>`;
+        }
+      } else {
+        input.value = '';
+        input.readOnly = false;
+        input.style.backgroundColor = '#ffffff';
+        input.style.color = 'inherit';
+        input.style.borderColor = 'inherit';
+        input.style.boxShadow = 'none';
+
+        btn.innerHTML = '💾 Simpan Lisensi';
+        btn.style.background = 'linear-gradient(135deg, #4f46e5, #7c3aed)';
+        btn.style.boxShadow = '0 2px 8px rgba(124, 58, 237, 0.3)';
+
+        hint.innerHTML = '🔐 Ketikkan Kode Lisensi Sekolah dari Admin, lalu klik "Simpan Lisensi"';
+        input.focus();
+      }
+    }
+
+    function toggleLisensiState() {
+      const input = document.getElementById('kodeLisensi');
+      if (!input) return;
+
+      if (input.readOnly) {
+        // Mode edit -> buka input untuk ketik lisensi baru
+        setLicenseUIState('edit');
+      } else {
+        // Mode simpan
+        const val = input.value.trim().toUpperCase();
+        if (!val || val.startsWith('WG-FREE')) {
+          // Jika kosong atau mengetik WG-FREE-*, kembalikan ke Trial
+          setStoredLicense('');
+          const trialCode = getDeviceTrialCode();
+          setLicenseUIState('trial', trialCode);
+          showToast('success', 'Mode Trial Gratis', `Menggunakan akses Trial ${trialCode} (Maksimal 3x Cetak).`);
+          return;
+        }
+        input.classList.remove('input-error');
+        setStoredLicense(val);
+        setLicenseUIState('pro', val);
+        showToast('success', 'Lisensi Berhasil Disimpan!', `Kode lisensi "${val}" terdaftar & aktif.`);
+      }
+    }
+
+    // Auto-load saat halaman dibuka
+    function initLicenseOnLoad() {
+      const savedKode = getStoredLicense();
+      if (savedKode && !savedKode.startsWith('WG-FREE') && !savedKode.startsWith('WG-TRIAL')) {
+        setLicenseUIState('pro', savedKode);
+      } else {
+        const trialCode = getDeviceTrialCode();
+        setLicenseUIState('trial', trialCode);
+      }
+    }626; font-weight: 700;">🔒 Kuota Trial Gratis (3/3) Habis! Masukkan Kode Lisensi PRO untuk lanjut cetak.</span>`;
         }
       } else {
         input.value = '';
