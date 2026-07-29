@@ -843,31 +843,61 @@ app.post('/api/generate', async (req, res) => {
     const supabase = getSupabase();
 
     if (supabase) {
-      const { data, error: sbErr } = await supabase
-        .from('penyewa')
-        .select('*')
-        .eq('kode_lisensi', kode_lisensi_sekolah.trim().toUpperCase())
-        .single();
+      const inputCode = kode_lisensi_sekolah.trim().toUpperCase();
+      const isPublicTrial = inputCode === 'WG-FREE-TRIAL' || inputCode.startsWith('WG-FREE') || inputCode.startsWith('WG-TRIAL');
 
-      if (sbErr || !data) {
-        return res.status(404).json({
-          error: 'Kode Lisensi Sekolah tidak terdaftar atau salah!'
-        });
+      if (isPublicTrial) {
+        // Mode Trial Publik otomatis — cari atau buat otomatis di DB
+        let { data: trialData } = await supabase
+          .from('penyewa')
+          .select('*')
+          .eq('kode_lisensi', 'WG-FREE-TRIAL')
+          .single();
+
+        if (!trialData) {
+          const { data: created } = await supabase
+            .from('penyewa')
+            .insert({
+              nama_sekolah: '🎁 Pengguna Trial Gratis (Publik)',
+              kode_lisensi: 'WG-FREE-TRIAL',
+              status_paket: 'trial',
+              masa_aktif: '2099-12-31',
+              total_cetak_hari_ini: 0
+            })
+            .select()
+            .single();
+          trialData = created;
+        }
+
+        penyewa = trialData || { nama_sekolah: '🎁 Pengguna Trial Gratis (Publik)', status_paket: 'trial' };
+        console.log(`[Lisensi OK] Trial Publik | Total Cetak: ${penyewa.total_cetak_hari_ini || 0}`);
+      } else {
+        const { data, error: sbErr } = await supabase
+          .from('penyewa')
+          .select('*')
+          .eq('kode_lisensi', inputCode)
+          .single();
+
+        if (sbErr || !data) {
+          return res.status(404).json({
+            error: 'Kode Lisensi Sekolah tidak terdaftar atau salah!'
+          });
+        }
+
+        // Cek status expired
+        const hariIni = new Date();
+        hariIni.setHours(0, 0, 0, 0);
+        const masaAktif = data.masa_aktif ? new Date(data.masa_aktif) : null;
+
+        if (data.status_paket === 'expired' || (masaAktif && masaAktif < hariIni)) {
+          return res.status(403).json({
+            error: 'Masa aktif lisensi sekolah Anda telah habis. Silakan hubungi Admin Wadah Guru!'
+          });
+        }
+
+        penyewa = data;
+        console.log(`[Lisensi OK] ${data.nama_sekolah} | Paket: ${data.status_paket}`);
       }
-
-      // Cek status expired
-      const hariIni = new Date();
-      hariIni.setHours(0, 0, 0, 0);
-      const masaAktif = data.masa_aktif ? new Date(data.masa_aktif) : null;
-
-      if (data.status_paket === 'expired' || (masaAktif && masaAktif < hariIni)) {
-        return res.status(403).json({
-          error: 'Masa aktif lisensi sekolah Anda telah habis. Silakan hubungi Admin Wadah Guru!'
-        });
-      }
-
-      penyewa = data;
-      console.log(`[Lisensi OK] ${data.nama_sekolah} | Paket: ${data.status_paket}`);
     } else {
       // Supabase belum dikonfigurasi — mode development bebas lisensi
       console.warn('[WARNING] Supabase tidak dikonfigurasi. Berjalan tanpa cek lisensi.');
