@@ -427,14 +427,14 @@ async function callOpenRouter(apiKey, prompt) {
 // ══════════════════════════════════════════════════════════════
 //  callAI_Tenant — Routing AI berdasarkan paket lisensi sekolah
 //  - TRIAL  : pakai GROQ_KEY_TRIAL dari server env
-//  - PRO    : rotasi groq_keys dari DB, failover openrouter_key DB
-//  - GLOBAL : fallback Gemini jika semua habis
+//  - PRO    : rotasi shared pool dari tabel pro_key_pool (Supabase)
+//             failover: OPENROUTER_API_KEY server → Gemini
 // ══════════════════════════════════════════════════════════════
 async function callAI_Tenant(prompt, penyewa) {
-  const paket       = penyewa?.status_paket || 'trial';
-  const geminiKey   = (process.env.GEMINI_API_KEY || '').trim();
+  const paket     = penyewa?.status_paket || 'trial';
+  const geminiKey = (process.env.GEMINI_API_KEY || '').trim();
 
-  // ── A. JALUR TRIAL — 1 key cadangan server ────────────────
+  // ── A. JALUR TRIAL ────────────────────────────────────────
   if (paket !== 'pro') {
     const trialKey = (process.env.GROQ_KEY_TRIAL || '').trim();
     if (trialKey.startsWith('gsk_')) {
@@ -469,42 +469,74 @@ async function callAI_Tenant(prompt, penyewa) {
     throw new Error('Kuota sumber AI TRIAL habis. Hubungi admin atau upgrade ke PRO.');
   }
 
-  // ── B. JALUR PRO — rotasi 10 groq_keys dari DB ───────────
-  const rawGroqKeys = (penyewa.groq_keys || '').split(',').map(k => k.trim()).filter(k => k.startsWith('gsk_'));
+  // ── B. JALUR PRO — Pool Key Bersama dari Supabase ─────────
+  const supabasePro = getSupabase();
+  let poolGroqKeys  = [];
+  let poolOrKey     = '';
 
-  for (let i = 0; i < rawGroqKeys.length; i++) {
+  if (supabasePro) {
+    // Ambil semua key aktif dari pool
+    const { data: poolData } = await supabasePro
+      .from('pro_key_pool')
+      .select('key_type, api_key')
+      .eq('is_active', true)
+      .order('id', { ascending: true });
+
+    if (poolData && poolData.length > 0) {
+      poolGroqKeys = poolData.filter(r => r.key_type === 'groq').map(r => r.api_key.trim());
+      const orRow  = poolData.find(r => r.key_type === 'openrouter');
+      if (orRow) poolOrKey = orRow.api_key.trim();
+    }
+  }
+
+  console.log(`[AI PRO] Pool: ${poolGroqKeys.length} Groq key, OpenRouter: ${poolOrKey ? 'Ada' : 'Tidak'}`);
+
+  // Rotasi Groq pool
+  for (let i = 0; i < poolGroqKeys.length; i++) {
     try {
-      console.log(`[AI PRO] Groq Key-${i + 1} mencoba...`);
-      const result = await callGroqKey(rawGroqKeys[i], prompt);
-      console.log(`[AI OK] Berhasil via Groq PRO Key-${i + 1}`);
+      console.log(`[AI PRO] Pool Groq Key-${i + 1}/${poolGroqKeys.length} mencoba...`);
+      const result = await callGroqKey(poolGroqKeys[i], prompt);
+      console.log(`[AI OK] Berhasil via Pool Groq Key-${i + 1}`);
       return result;
     } catch (err) {
       if (err.status === 429) {
-        console.warn(`[AI PRO] Groq Key-${i + 1} rate-limited, lanjut ke key berikutnya...`);
+        console.warn(`[AI PRO] Pool Groq Key-${i + 1} rate-limited, lanjut...`);
         continue;
       }
       if (err.status === 401 || err.status === 403) {
-        console.warn(`[AI PRO] Groq Key-${i + 1} tidak valid, skip.`);
+        console.warn(`[AI PRO] Pool Groq Key-${i + 1} tidak valid, skip.`);
         continue;
       }
       throw err;
     }
   }
 
-  // ── Failover PRO: openrouter_key dari DB ─────────────────
-  const orKey = (penyewa.openrouter_key || '').trim();
-  if (orKey) {
+  // Failover: OpenRouter dari pool
+  if (poolOrKey) {
     try {
-      console.log('[AI PRO] Failover ke OpenRouter DB...');
-      const result = await callOpenRouter(orKey, prompt);
-      console.log('[AI OK] Berhasil via OpenRouter PRO');
+      console.log('[AI PRO] Failover ke OpenRouter pool...');
+      const result = await callOpenRouter(poolOrKey, prompt);
+      console.log('[AI OK] Berhasil via OpenRouter pool');
       return result;
     } catch (err) {
-      console.warn('[AI PRO] OpenRouter DB gagal:', err.message);
+      console.warn('[AI PRO] OpenRouter pool gagal:', err.message);
     }
   }
 
-  // ── Failover akhir: Gemini ────────────────────────────────
+  // Failover env: OPENROUTER_API_KEY server
+  const envOrKey = (process.env.OPENROUTER_API_KEY || '').trim();
+  if (envOrKey) {
+    try {
+      console.log('[AI PRO] Failover ke OPENROUTER_API_KEY env...');
+      const result = await callOpenRouter(envOrKey, prompt);
+      console.log('[AI OK] Berhasil via OpenRouter env');
+      return result;
+    } catch (err) {
+      console.warn('[AI PRO] OpenRouter env gagal:', err.message);
+    }
+  }
+
+  // Failover akhir: Gemini
   if (geminiKey) {
     const genAI = new GoogleGenerativeAI(geminiKey);
     for (const m of ['gemini-2.0-flash', 'gemini-1.5-flash']) {
@@ -522,7 +554,7 @@ async function callAI_Tenant(prompt, penyewa) {
     }
   }
 
-  throw new Error('Semua sumber AI PRO habis. Segera tambahkan API Key baru di panel admin.');
+  throw new Error('Semua sumber AI PRO habis. Tambahkan API Key baru di panel admin.');
 }
 
 // ─── callAI: Tetap tersedia untuk refine-prompt (server env) ──
@@ -674,6 +706,45 @@ app.post('/api/admin', async (req, res) => {
 
       if (error) throw error;
       return res.status(200).json({ sukses: true, pesan: 'API Key berhasil diperbarui!' });
+    }
+
+    // ── CRUD Pool Key PRO ──────────────────────────────────────
+
+    if (aksi === 'daftar_pool_key') {
+      const { data, error } = await supabase
+        .from('pro_key_pool')
+        .select('*')
+        .order('id', { ascending: true });
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, data });
+    }
+
+    if (aksi === 'tambah_pool_key') {
+      const { key_type, api_key, label } = body;
+      if (!api_key || !api_key.trim()) return res.status(400).json({ error: 'api_key wajib diisi.' });
+      const validType = ['groq', 'openrouter'].includes(key_type) ? key_type : 'groq';
+      const { data, error } = await supabase
+        .from('pro_key_pool')
+        .insert({ key_type: validType, api_key: api_key.trim(), label: (label || '').trim(), is_active: true })
+        .select().single();
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, data, pesan: `Key ${validType.toUpperCase()} berhasil ditambahkan ke pool!` });
+    }
+
+    if (aksi === 'hapus_pool_key') {
+      const { id } = body;
+      if (!id) return res.status(400).json({ error: 'ID wajib diisi.' });
+      const { error } = await supabase.from('pro_key_pool').delete().eq('id', id);
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, pesan: 'Key berhasil dihapus dari pool.' });
+    }
+
+    if (aksi === 'toggle_pool_key') {
+      const { id, is_active } = body;
+      if (!id) return res.status(400).json({ error: 'ID wajib diisi.' });
+      const { error } = await supabase.from('pro_key_pool').update({ is_active: !!is_active }).eq('id', id);
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, pesan: `Key ${is_active ? 'diaktifkan' : 'dinonaktifkan'}.` });
     }
 
     return res.status(400).json({ error: `Aksi "${aksi}" tidak dikenal.` });
