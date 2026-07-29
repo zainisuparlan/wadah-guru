@@ -668,15 +668,47 @@
       return code;
     }
 
-    // ─── Trial Counter Helper (Max 3x Cetak Gratis) ─────────
+    // ─── Trial Counter Helper (Max 3x/Hari, Reset Tiap 24 Jam) ─
     const MAX_TRIAL_PRINTS = 3;
+
+    function getTrialDateKey() {
+      return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    }
+
     function getTrialPrintsCount() {
+      const today = getTrialDateKey();
+      const storedDate = localStorage.getItem('wg_trial_date') || '';
+      if (storedDate !== today) {
+        // Hari baru — reset otomatis
+        localStorage.setItem('wg_trial_date', today);
+        localStorage.setItem('wg_trial_prints_count', '0');
+        document.cookie = `wg_trial_date=${today}; max-age=315360000; path=/; SameSite=Lax`;
+        document.cookie = `wg_trial_prints_count=0; max-age=315360000; path=/; SameSite=Lax`;
+        return 0;
+      }
       return parseInt(localStorage.getItem('wg_trial_prints_count') || '0', 10);
     }
+
     function incrementTrialPrintsCount() {
+      const today = getTrialDateKey();
       const current = getTrialPrintsCount();
-      localStorage.setItem('wg_trial_prints_count', (current + 1).toString());
-      return current + 1;
+      const next = current + 1;
+      localStorage.setItem('wg_trial_date', today);
+      localStorage.setItem('wg_trial_prints_count', next.toString());
+      document.cookie = `wg_trial_date=${today}; max-age=315360000; path=/; SameSite=Lax`;
+      document.cookie = `wg_trial_prints_count=${next}; max-age=315360000; path=/; SameSite=Lax`;
+      return next;
+    }
+
+    function getTrialResetCountdown() {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      const diffMs = tomorrow - now;
+      const h = Math.floor(diffMs / 3600000);
+      const m = Math.floor((diffMs % 3600000) / 60000);
+      return `${h} jam ${m} menit`;
     }
 
     // ─── Manajer Tampilan & Lisensi Sekolah ───────────────────
@@ -716,9 +748,10 @@
         btn.style.boxShadow = '0 2px 8px rgba(217, 119, 6, 0.3)';
 
         if (sisa > 0) {
-          hint.innerHTML = `<span style="color: #d97706; font-weight: 600;">🎁 LISENSI TRIAL GRATIS: ${trialCode} (Tersisa: ${sisa}/${MAX_TRIAL_PRINTS}x Cetak). Masukkan Kode PRO jika berlangganan.</span>`;
+          hint.innerHTML = `<span style="color: #d97706; font-weight: 600;">🎁 TRIAL GRATIS HARI INI: ${trialCode} — Tersisa <b>${sisa}/${MAX_TRIAL_PRINTS}x</b> cetak. Reset otomatis tiap hari. Masukkan Kode PRO jika berlangganan.</span>`;
         } else {
-          hint.innerHTML = `<span style="color: #dc2626; font-weight: 700;">🔒 Kuota Trial Gratis ${trialCode} (3/3) Habis! Masukkan Kode Lisensi PRO untuk lanjut cetak.</span>`;
+          const countdown = getTrialResetCountdown();
+          hint.innerHTML = `<span style="color: #dc2626; font-weight: 700;">🔒 Kuota 3x cetak hari ini habis! Coba lagi dalam <b>${countdown}</b> atau masukkan Kode Lisensi PRO.</span>`;
         }
       } else {
         input.value = '';

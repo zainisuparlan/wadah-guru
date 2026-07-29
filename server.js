@@ -745,7 +745,20 @@ app.post('/api/admin', async (req, res) => {
         .eq('id', id);
 
       if (error) throw error;
-      return res.status(200).json({ sukses: true, pesan: 'Data lisensi sekolah berhasil dihapus!' });
+      return res.status(200).json({ sukses: true, pesan: 'Data lisensi berhasil dihapus!' });
+    }
+
+    if (aksi === 'reset_kuota') {
+      const { id } = body;
+      if (!id) return res.status(400).json({ error: 'ID penyewa wajib diisi.' });
+
+      const { error } = await supabase
+        .from('penyewa')
+        .update({ total_cetak_hari_ini: 0 })
+        .eq('id', id);
+
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, pesan: 'Kuota cetak berhasil direset ke 0!' });
     }
 
 
@@ -882,30 +895,42 @@ app.post('/api/generate', async (req, res) => {
       const isPublicTrial = inputCode === 'WG-FREE-TRIAL' || inputCode.startsWith('WG-FREE') || inputCode.startsWith('WG-TRIAL');
 
       if (isPublicTrial) {
-        // Mode Trial Publik otomatis — cari atau buat otomatis di DB
-        let { data: trialData } = await supabase
+        // Mode Trial — daftarkan per-perangkat (per kode unik WG-FREE-XXXXXX)
+        let { data: trialData, error: trialErr } = await supabase
           .from('penyewa')
           .select('*')
-          .eq('kode_lisensi', 'WG-FREE-TRIAL')
+          .eq('kode_lisensi', inputCode)
           .single();
 
+        const hariIniStr = new Date().toISOString().slice(0, 10);
+
         if (!trialData) {
+          // Perangkat baru — buat entri baru
           const { data: created } = await supabase
             .from('penyewa')
             .insert({
-              nama_sekolah: '🎁 Pengguna Trial Gratis (Publik)',
-              kode_lisensi: 'WG-FREE-TRIAL',
+              nama_sekolah: `🎁 Trial (${inputCode})`,
+              kode_lisensi: inputCode,
               status_paket: 'trial',
               masa_aktif: '2099-12-31',
-              total_cetak_hari_ini: 0
+              total_cetak_hari_ini: 1
             })
             .select()
             .single();
           trialData = created;
+          console.log(`[Trial Baru] ${inputCode} terdaftar`);
+        } else {
+          // Perangkat sudah ada — update counter harian
+          const newCount = (trialData.total_cetak_hari_ini || 0) + 1;
+          await supabase
+            .from('penyewa')
+            .update({ total_cetak_hari_ini: newCount })
+            .eq('kode_lisensi', inputCode);
+          trialData.total_cetak_hari_ini = newCount;
+          console.log(`[Trial] ${inputCode} | Total Cetak DB: ${newCount}`);
         }
 
-        penyewa = trialData || { nama_sekolah: '🎁 Pengguna Trial Gratis (Publik)', status_paket: 'trial' };
-        console.log(`[Lisensi OK] Trial Publik | Total Cetak: ${penyewa.total_cetak_hari_ini || 0}`);
+        penyewa = trialData || { nama_sekolah: `🎁 Trial (${inputCode})`, status_paket: 'trial' };
       } else {
         const { data, error: sbErr } = await supabase
           .from('penyewa')
