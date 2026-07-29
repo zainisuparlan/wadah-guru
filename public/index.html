@@ -748,10 +748,10 @@
         btn.style.boxShadow = '0 2px 8px rgba(217, 119, 6, 0.3)';
 
         if (sisa > 0) {
-          hint.innerHTML = `<span style="color: #d97706; font-weight: 600;">🎁 TRIAL GRATIS HARI INI: ${trialCode} — Tersisa <b>${sisa}/${MAX_TRIAL_PRINTS}x</b> cetak. Reset otomatis tiap hari. Masukkan Kode PRO jika berlangganan.</span>`;
+          hint.innerHTML = `<span style="color: #d97706; font-weight: 600;">🎁 TRIAL GRATIS HARI INI: ${trialCode} — Tersisa <b>${sisa}/${MAX_TRIAL_PRINTS}x</b> cetak. Reset otomatis tiap hari.</span>`;
         } else {
           const countdown = getTrialResetCountdown();
-          hint.innerHTML = `<span style="color: #dc2626; font-weight: 700;">🔒 Kuota 3x cetak hari ini habis! Coba lagi dalam <b>${countdown}</b> atau masukkan Kode Lisensi PRO.</span>`;
+          hint.innerHTML = `<span style="color: #dc2626; font-weight: 700; line-height: 1.6;">🔒 <b>Kuota trial hari ini sudah habis.</b><br>Kembali lagi besok (reset dalam <b>${countdown}</b>), atau ingin akses tak terbatas? Hubungi kami lewat banner <b>INFO KEMITRAAN</b> di atas. 🤝</span>`;
         }
       } else {
         input.value = '';
@@ -995,7 +995,9 @@
         if (mEl && msg) mEl.textContent = msg;
       }
       toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 5000);
+      // Error toast lebih lama (8 dtk) agar kebaca di layar HP sempit
+      const duration = type === 'error' ? 8000 : 5000;
+      setTimeout(() => toast.classList.remove('show'), duration);
     }
 
     // ─── Form Submit ─────────────────────────────────────────
@@ -1031,8 +1033,8 @@
         // Mode Trial — cek kuota
         const used = getTrialPrintsCount();
         if (used >= MAX_TRIAL_PRINTS) {
-          showToast('error', '🔒 Kuota Trial Habis!', `Sudah ${MAX_TRIAL_PRINTS}x cetak gratis. Minta Kode PRO dari Admin untuk lanjut.`);
-          setLicenseUIState('edit');
+          showToast('error', '🔒 Kuota Trial Hari Ini Habis', `Kembali lagi besok untuk 3x cetak gratis baru. Ingin cetak tanpa batas? Lihat banner INFO KEMITRAAN di atas halaman. 🤝`);
+          setLicenseUIState('trial', kodeInput);
           return;
         }
         kodeInput = getDeviceTrialCode();
