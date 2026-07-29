@@ -798,29 +798,43 @@ app.post('/api/admin', async (req, res) => {
 
 // ─── POST /api/refine-prompt ─ Asisten Kata Kunci AI ─────
 app.post('/api/refine-prompt', async (req, res) => {
+  // Set 25 detik timeout agar tidak hang di Vercel
+  const timer = setTimeout(() => {
+    if (!res.headersSent) {
+      res.status(504).json({ error: 'AI timeout. Coba lagi dalam beberapa detik.' });
+    }
+  }, 25000);
+
   try {
     const { topic } = req.body;
     if (!topic || !topic.trim()) {
+      clearTimeout(timer);
       return res.status(400).json({ error: 'Materi singkat wajib diisi.' });
     }
 
-    const promptText = `Kamu adalah asisten guru Indonesia. Tugasmu adalah merangkai kata kunci/materi dari guru (misalnya: '${topic.trim()}') menjadi sebuah kalimat petunjuk pembuatan game edukasi yang lebih rapi, kaya akan contoh materi pelajaran yang konkret, serta sesuai dengan tingkat kelas yang dimaksud. Tuliskan hasilnya dalam 2-3 kalimat yang padat dan jelas.
+    const promptText = `Kamu adalah asisten guru Indonesia. Rangkai materi dari guru berikut menjadi kalimat kata kunci yang padat untuk game edukasi.
 
 Materi dari Guru: "${topic.trim()}"
+
+Tuliskan hasilnya dalam 2-3 kalimat konkret, sebutkan contoh-contoh spesifik sesuai topik, gunakan bahasa Indonesia yang baik.
 
 Hasil Rangkaian Kata Kunci AI:`;
 
     console.log(`[Refine Prompt] Topic: "${topic.trim()}"`);
     const rawText = await callAI(promptText);
-    const refinedText = rawText.trim();
 
-    res.json({ refinedPrompt: refinedText });
+    clearTimeout(timer);
+    if (!res.headersSent) {
+      res.json({ refinedPrompt: rawText.trim() });
+    }
   } catch (err) {
-    console.error('[Refine Prompt Error]', err);
-    res.status(500).json({
-      error: `Gagal merangkai kata kunci: ${err.message}`,
-      detail: err.message
-    });
+    clearTimeout(timer);
+    console.error('[Refine Prompt Error]', err.message);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: `Gagal merangkai kata kunci: ${err.message}`
+      });
+    }
   }
 });
 

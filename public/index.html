@@ -969,15 +969,13 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // Validasi sederhana
-      const requiredFields = ['namaGuru','waliKelas','kelas','templateKey','keywords','kodeLisensi'];
+      // Validasi field — kecuali kodeLisensi (auto-diisi oleh sistem)
+      const requiredFields = ['namaGuru','waliKelas','kelas','templateKey','keywords'];
       let isValid = true;
-
       requiredFields.forEach(fieldId => {
         const el = document.getElementById(fieldId);
-        if (!el.value.trim()) {
-          el.classList.add('input-error');
-          el.focus();
+        if (!el || !el.value.trim()) {
+          if (el) el.classList.add('input-error');
           isValid = false;
         } else {
           el.classList.remove('input-error');
@@ -989,22 +987,22 @@
         return;
       }
 
-      let kodeInput = document.getElementById('kodeLisensi').value.trim().toUpperCase();
+      // Tentukan kode yang akan dikirim
       const savedKode = getStoredLicense();
-      const isPro = savedKode && savedKode !== 'WG-FREE-TRIAL';
+      const isPro = savedKode && !savedKode.startsWith('WG-FREE') && !savedKode.startsWith('WG-TRIAL');
+      let kodeInput;
 
-      if (!isPro) {
-        kodeInput = 'WG-FREE-TRIAL';
+      if (isPro) {
+        kodeInput = savedKode;
+      } else {
+        // Mode Trial — cek kuota
         const used = getTrialPrintsCount();
         if (used >= MAX_TRIAL_PRINTS) {
-          showToast('error', '🔒 Kuota Trial Gratis Habis!', `Anda telah menggunakan ${MAX_TRIAL_PRINTS}x cetak gratis. Silakan masukkan Kode Lisensi PRO dari Admin.`);
+          showToast('error', '🔒 Kuota Trial Habis!', `Sudah ${MAX_TRIAL_PRINTS}x cetak gratis. Minta Kode PRO dari Admin untuk lanjut.`);
           setLicenseUIState('edit');
-          document.getElementById('kodeLisensi').focus();
           return;
         }
-      } else {
-        setStoredLicense(kodeInput);
-        setLicenseUIState('pro', kodeInput);
+        kodeInput = getDeviceTrialCode();
       }
 
       // Show loading
@@ -1013,41 +1011,31 @@
       resetLoadingSteps();
       animateLoadingSteps();
 
-      const formData = {
-        namaGuru:              document.getElementById('namaGuru').value.trim(),
-        waliKelas:             document.getElementById('waliKelas').value.trim(),
-        kelas:                 document.getElementById('kelas').value.trim(),
-        templateKey:           document.getElementById('templateKey').value,
-        keywords:              document.getElementById('keywords').value.trim(),
-        sessionId:             SESSION_ID,
-        kode_lisensi_sekolah:  kodeInput
-      };
-
       try {
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
+          body: JSON.stringify({
+            namaGuru:             document.getElementById('namaGuru').value.trim(),
+            waliKelas:            document.getElementById('waliKelas').value.trim(),
+            kelas:                document.getElementById('kelas').value.trim(),
+            templateKey:          document.getElementById('templateKey').value,
+            keywords:             document.getElementById('keywords').value.trim(),
+            sessionId:            SESSION_ID,
+            kode_lisensi_sekolah: kodeInput
+          })
         });
-
-        // Hide loading overlay
-        loadingOverlay.classList.remove('active');
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({ error: 'Gagal membaca respons server' }));
           showToast('error', 'Gagal Generate Game', errData.error || 'Silakan coba lagi.');
-          unlockGenerateBtn(5);
           return;
         }
 
-        // Jika mode trial, tambah counter pemakaian trial
+        // Jika trial berhasil, increment counter
         if (!isPro) {
           incrementTrialPrintsCount();
-          setLicenseUIState('trial');
-        }
-          // Cooldown 5 detik sebelum tombol aktif kembali (anti-spam)
-          unlockGenerateBtn(5);
-          return;
+          setLicenseUIState('trial', kodeInput);
         }
 
         // Trigger download file
@@ -1065,17 +1053,15 @@
         document.body.removeChild(anchor);
         URL.revokeObjectURL(url);
 
-        showToast('success');
+        showToast('success', 'Game Berhasil Dibuat!', `File "${filename}" sedang diunduh ke perangkat Anda.`);
         loadDownloads();
         triggerConfetti();
 
-        // Cooldown 5 detik setelah berhasil
-        unlockGenerateBtn(5);
-
       } catch (err) {
-        loadingOverlay.classList.remove('active');
         console.error('Fetch error:', err);
-        showToast('error', 'Koneksi Gagal', 'Tidak dapat terhubung ke server. Pastikan server berjalan.');
+        showToast('error', 'Koneksi Gagal', 'Tidak dapat terhubung ke server. Pastikan koneksi internet aktif.');
+      } finally {
+        loadingOverlay.classList.remove('active');
         unlockGenerateBtn(5);
       }
     });
