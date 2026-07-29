@@ -1,1 +1,3 @@
-// File ini sudah digabung ke server.js utama (Satu Pintu).
+// Forward ke server.js utama (Vercel Serverless Handler)
+const app = require('../server.js');
+module.exports = app;

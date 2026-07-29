@@ -19,14 +19,24 @@ if (typeof global.WebSocket === 'undefined') {
 }
 
 // ─── Inisialisasi Supabase (lazy, hanya jika env tersedia) ─
-// Paksa inisialisasi langsung sejak server menyala
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY,
-    {
+let _supabaseClient = null;
+function getSupabase() {
+  if (_supabaseClient) return _supabaseClient;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (url && key && url.trim() && key.trim()) {
+    try {
+      _supabaseClient = createClient(url.trim(), key.trim(), {
         auth: { persistSession: false, autoRefreshToken: false }
+      });
+      return _supabaseClient;
+    } catch (e) {
+      console.error('[Supabase Init Error]', e.message);
+      return null;
     }
-);
+  }
+  return null;
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
