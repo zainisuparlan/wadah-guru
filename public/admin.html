@@ -120,49 +120,6 @@
       </div>
     </div>
 
-    <!-- ── Panel Pool Key PRO ────────────────────────────────── -->
-    <div class="bg-gray-900 border border-emerald-800/50 rounded-2xl overflow-hidden">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-emerald-950/30">
-        <div>
-          <h2 class="text-base font-bold text-white">🔑 Pool Key PRO — Bersama Semua Sekolah PRO</h2>
-          <p class="text-xs text-gray-400 mt-0.5">Groq (max 100 key rotasi) + OpenRouter (cadangan). Tanpa perlu redeploy.</p>
-        </div>
-        <button onclick="muatPoolKey()" class="text-xs text-emerald-400 hover:text-emerald-300 transition">↻ Refresh</button>
-      </div>
-
-      <!-- Form Tambah Key -->
-      <div class="px-6 py-4 border-b border-gray-800/50 bg-gray-900/60">
-        <div class="flex flex-col sm:flex-row gap-3">
-          <select id="poolKeyType"
-            class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[140px]">
-            <option value="groq">🤖 Groq</option>
-            <option value="openrouter">🌐 OpenRouter</option>
-          </select>
-          <input id="poolKeyVal" type="text" placeholder="Paste API Key (gsk_... atau sk-or-...)" 
-            class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
-            onkeydown="if(event.key==='Enter') tambahPoolKey()"
-          />
-          <input id="poolKeyLabel" type="text" placeholder="Label (cth: Akun Groq #1)" 
-            class="sm:max-w-[180px] bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-          <button onclick="tambahPoolKey()" 
-            class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl transition text-sm whitespace-nowrap">
-            ➕ Tambah Key
-          </button>
-        </div>
-      </div>
-
-      <!-- Loading & List Pool -->
-      <div id="poolLoading" class="py-8 text-center text-gray-500 text-sm">⏳ Memuat pool key...</div>
-      <div id="poolList" class="hidden divide-y divide-gray-800">
-        <!-- diisi JS -->
-      </div>
-      <div id="poolKosong" class="hidden py-8 text-center text-gray-500 text-sm">Pool kosong. Tambahkan key Groq/OpenRouter di atas! 🔑</div>
-      <div id="poolStats" class="px-6 py-3 text-xs text-gray-500 border-t border-gray-800 bg-gray-900/40 hidden">
-        <!-- diisi JS -->
-      </div>
-    </div>
-
     <!-- ── Tabel Penyewa ───────────────────────────────────── -->
     <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800">
@@ -184,6 +141,7 @@
               <th class="px-4 py-3">Masa Aktif</th>
               <th class="px-4 py-3">Cetak Hari Ini</th>
               <th class="px-4 py-3 min-w-[300px]">Aksi Cepat</th>
+              <th class="px-4 py-3 min-w-[280px]">API Key Groq (bisa ratusan key)</th>
             </tr>
           </thead>
           <tbody id="tabelBody" class="divide-y divide-gray-800 text-gray-200">
@@ -224,7 +182,6 @@
     if (res && res.sukses) {
       renderTabel(res.data);
       updateStats(res.data);
-      muatPoolKey();  // Muat pool key saat login
     }
   }
 
@@ -380,6 +337,18 @@
             </button>
           </div>
         </td>
+        <td class="px-4 py-3">
+          <textarea
+            id="ta_${row.id}"
+            rows="5"
+            placeholder="Paste key Groq disini, pisah koma atau enter. Bisa ratusan key! (gsk_aaa, gsk_bbb, ...)"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg text-xs text-gray-300 p-2 resize-y focus:outline-none focus:ring-1 focus:ring-violet-500"
+          >${esc(row.groq_keys || '')}</textarea>
+          <button onclick="simpanKey(${row.id})"
+            class="mt-1.5 w-full bg-gray-700 hover:bg-violet-700 text-white text-xs font-bold py-1.5 rounded-lg transition">
+            🔑 Simpan Key
+          </button>
+        </td>
       `;
       tbody.appendChild(tr);
     });
@@ -417,97 +386,6 @@
   // ── Helper: Escape HTML ──────────────────────────────────
   function esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  // ── Pool Key PRO Functions ───────────────────────────────
-  async function muatPoolKey() {
-    document.getElementById('poolLoading').classList.remove('hidden');
-    document.getElementById('poolList').classList.add('hidden');
-    document.getElementById('poolKosong').classList.add('hidden');
-    document.getElementById('poolStats').classList.add('hidden');
-
-    const res = await callApi({ aksi: 'daftar_pool_key' });
-    document.getElementById('poolLoading').classList.add('hidden');
-
-    if (!res.sukses) {
-      showToast('❌', res.error || 'Gagal memuat pool key', true);
-      document.getElementById('poolKosong').classList.remove('hidden');
-      return;
-    }
-
-    renderPoolKey(res.data || []);
-  }
-
-  function renderPoolKey(data) {
-    const list   = document.getElementById('poolList');
-    const kosong = document.getElementById('poolKosong');
-    const stats  = document.getElementById('poolStats');
-    list.innerHTML = '';
-
-    if (!data || data.length === 0) {
-      kosong.classList.remove('hidden');
-      stats.classList.add('hidden');
-      return;
-    }
-    kosong.classList.add('hidden');
-
-    const groqCount = data.filter(r => r.key_type === 'groq').length;
-    const orCount   = data.filter(r => r.key_type === 'openrouter').length;
-    const aktifCount = data.filter(r => r.is_active).length;
-    stats.innerHTML = `🤖 Groq: <strong class="text-emerald-400">${groqCount}</strong> key &nbsp;|&nbsp; 🌐 OpenRouter: <strong class="text-blue-400">${orCount}</strong> key &nbsp;|&nbsp; ✅ Aktif: <strong class="text-white">${aktifCount}</strong> / ${data.length}`;
-    stats.classList.remove('hidden');
-    list.classList.remove('hidden');
-
-    data.forEach(row => {
-      const maskedKey = row.api_key ? row.api_key.substring(0, 12) + '•••••••••••••' : '';
-      const typeColor = row.key_type === 'groq' ? 'text-emerald-400' : 'text-blue-400';
-      const typeBadge = row.key_type === 'groq' ? '🤖 Groq' : '🌐 OpenRouter';
-      const activeClass = row.is_active ? 'opacity-100' : 'opacity-40';
-
-      const div = document.createElement('div');
-      div.className = `flex items-center gap-3 px-6 py-3 hover:bg-gray-800/40 transition ${activeClass}`;
-      div.innerHTML = `
-        <span class="text-xs font-bold ${typeColor} min-w-[90px]">${typeBadge}</span>
-        <code class="flex-1 text-xs text-gray-400 font-mono truncate">${esc(maskedKey)}</code>
-        <span class="text-xs text-gray-500 min-w-[100px] truncate">${esc(row.label || '')}</span>
-        <button onclick="togglePoolKey(${row.id}, ${!row.is_active})"
-          class="text-xs px-3 py-1 rounded-lg border transition ${row.is_active ? 'border-gray-600 text-gray-400 hover:border-red-500 hover:text-red-400' : 'border-emerald-700 text-emerald-400 hover:bg-emerald-900/30'} whitespace-nowrap">
-          ${row.is_active ? '⏸ Nonaktif' : '▶ Aktifkan'}
-        </button>
-        <button onclick="hapusPoolKey(${row.id})"
-          class="text-xs px-3 py-1 rounded-lg border border-gray-700 text-gray-400 hover:border-red-600 hover:text-red-400 transition">
-          🗑
-        </button>
-      `;
-      list.appendChild(div);
-    });
-  }
-
-  async function tambahPoolKey() {
-    const key_type = document.getElementById('poolKeyType').value;
-    const api_key  = document.getElementById('poolKeyVal').value.trim();
-    const label    = document.getElementById('poolKeyLabel').value.trim();
-    if (!api_key) { showToast('⚠️', 'API Key tidak boleh kosong!', true); return; }
-    const res = await callApi({ aksi: 'tambah_pool_key', key_type, api_key, label });
-    if (res.sukses) {
-      showToast('✅', res.pesan);
-      document.getElementById('poolKeyVal').value   = '';
-      document.getElementById('poolKeyLabel').value = '';
-      muatPoolKey();
-    } else showToast('❌', res.error, true);
-  }
-
-  async function hapusPoolKey(id) {
-    if (!confirm('Hapus key ini dari pool?')) return;
-    const res = await callApi({ aksi: 'hapus_pool_key', id });
-    if (res.sukses) { showToast('🗑', res.pesan); muatPoolKey(); }
-    else showToast('❌', res.error, true);
-  }
-
-  async function togglePoolKey(id, is_active) {
-    const res = await callApi({ aksi: 'toggle_pool_key', id, is_active });
-    if (res.sukses) { showToast('🔄', res.pesan); muatPoolKey(); }
-    else showToast('❌', res.error, true);
   }
 
   // ── Register PWA Service Worker ──────────────────────────

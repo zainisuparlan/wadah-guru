@@ -469,57 +469,41 @@ async function callAI_Tenant(prompt, penyewa) {
     throw new Error('Kuota sumber AI TRIAL habis. Hubungi admin atau upgrade ke PRO.');
   }
 
-  // ── B. JALUR PRO — Pool Key Bersama dari Supabase ─────────
-  const supabasePro = getSupabase();
-  let poolGroqKeys  = [];
-  let poolOrKey     = '';
+  // ── B. JALUR PRO — rotasi groq_keys per sekolah dari DB ──
+  const rawGroqKeys = (penyewa.groq_keys || '')
+    .split(/[\n,]+/)
+    .map(k => k.trim())
+    .filter(k => k.startsWith('gsk_'));
 
-  if (supabasePro) {
-    // Ambil semua key aktif dari pool
-    const { data: poolData } = await supabasePro
-      .from('pro_key_pool')
-      .select('key_type, api_key')
-      .eq('is_active', true)
-      .order('id', { ascending: true });
-
-    if (poolData && poolData.length > 0) {
-      poolGroqKeys = poolData.filter(r => r.key_type === 'groq').map(r => r.api_key.trim());
-      const orRow  = poolData.find(r => r.key_type === 'openrouter');
-      if (orRow) poolOrKey = orRow.api_key.trim();
-    }
-  }
-
-  console.log(`[AI PRO] Pool: ${poolGroqKeys.length} Groq key, OpenRouter: ${poolOrKey ? 'Ada' : 'Tidak'}`);
-
-  // Rotasi Groq pool
-  for (let i = 0; i < poolGroqKeys.length; i++) {
+  for (let i = 0; i < rawGroqKeys.length; i++) {
     try {
-      console.log(`[AI PRO] Pool Groq Key-${i + 1}/${poolGroqKeys.length} mencoba...`);
-      const result = await callGroqKey(poolGroqKeys[i], prompt);
-      console.log(`[AI OK] Berhasil via Pool Groq Key-${i + 1}`);
+      console.log(`[AI PRO] Groq Key-${i + 1}/${rawGroqKeys.length} mencoba...`);
+      const result = await callGroqKey(rawGroqKeys[i], prompt);
+      console.log(`[AI OK] Berhasil via Groq PRO Key-${i + 1}`);
       return result;
     } catch (err) {
       if (err.status === 429) {
-        console.warn(`[AI PRO] Pool Groq Key-${i + 1} rate-limited, lanjut...`);
+        console.warn(`[AI PRO] Groq Key-${i + 1} rate-limited, lanjut ke key berikutnya...`);
         continue;
       }
       if (err.status === 401 || err.status === 403) {
-        console.warn(`[AI PRO] Pool Groq Key-${i + 1} tidak valid, skip.`);
+        console.warn(`[AI PRO] Groq Key-${i + 1} tidak valid, skip.`);
         continue;
       }
       throw err;
     }
   }
 
-  // Failover: OpenRouter dari pool
-  if (poolOrKey) {
+  // Failover PRO: openrouter_key dari DB
+  const orKey = (penyewa.openrouter_key || '').trim();
+  if (orKey) {
     try {
-      console.log('[AI PRO] Failover ke OpenRouter pool...');
-      const result = await callOpenRouter(poolOrKey, prompt);
-      console.log('[AI OK] Berhasil via OpenRouter pool');
+      console.log('[AI PRO] Failover ke OpenRouter DB...');
+      const result = await callOpenRouter(orKey, prompt);
+      console.log('[AI OK] Berhasil via OpenRouter PRO');
       return result;
     } catch (err) {
-      console.warn('[AI PRO] OpenRouter pool gagal:', err.message);
+      console.warn('[AI PRO] OpenRouter DB gagal:', err.message);
     }
   }
 
