@@ -6,16 +6,16 @@
 // ============================================================
 
 require('dotenv').config();
-const express        = require('express');
+const express = require('express');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { createClient }       = require('@supabase/supabase-js');
-const fs   = require('fs');
+const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
 const path = require('path');
-const os   = require('os');
+const os = require('os');
 
 // ─── Polyfill WebSocket untuk Supabase di Node.js < 22 ─────
 if (typeof global.WebSocket === 'undefined') {
-  global.WebSocket = class {};
+  global.WebSocket = class { };
 }
 
 // ─── Inisialisasi Supabase (lazy, hanya jika env tersedia) ─
@@ -431,7 +431,7 @@ async function callOpenRouter(apiKey, prompt) {
 //             failover: OPENROUTER_API_KEY server → Gemini
 // ══════════════════════════════════════════════════════════════
 async function callAI_Tenant(prompt, penyewa) {
-  const paket     = penyewa?.status_paket || 'trial';
+  const paket = penyewa?.status_paket || 'trial';
   const geminiKey = (process.env.GEMINI_API_KEY || '').trim();
 
   // ── A. JALUR TRIAL ────────────────────────────────────────
@@ -580,7 +580,7 @@ app.post('/api/admin', async (req, res) => {
   const body = req.body || {};
   const { aksi, password_admin } = body;
 
-  const rawPass   = process.env.ADMIN_PASSWORD || 'admin123';
+  const rawPass = process.env.ADMIN_PASSWORD || 'admin123';
   const adminPass = String(rawPass).replace(/[\r\n]/g, '').trim();
   const inputPass = String(password_admin || '').replace(/[\r\n]/g, '').trim();
 
@@ -614,14 +614,14 @@ app.post('/api/admin', async (req, res) => {
       }
 
       const kode_lisensi = buatKodeLisensi(nama_sekolah.trim());
-      const masa_aktif   = tambahHari(7);
+      const masa_aktif = tambahHari(7);
 
       const { data, error } = await supabase
         .from('penyewa')
         .insert({
-          nama_sekolah  : nama_sekolah.trim(),
+          nama_sekolah: nama_sekolah.trim(),
           kode_lisensi,
-          status_paket  : 'trial',
+          status_paket: 'trial',
           masa_aktif,
           total_cetak_hari_ini: 0
         })
@@ -680,7 +680,7 @@ app.post('/api/admin', async (req, res) => {
       if (!id) return res.status(400).json({ error: 'ID penyewa wajib diisi.' });
 
       const update = {};
-      if (groq_keys     !== undefined) update.groq_keys     = groq_keys;
+      if (groq_keys !== undefined) update.groq_keys = groq_keys;
       if (openrouter_key !== undefined) update.openrouter_key = openrouter_key;
 
       const { error } = await supabase
@@ -864,9 +864,9 @@ app.post('/api/generate', async (req, res) => {
     }
 
     // ── [6] Inject info guru ke JSON ──────────────────────────
-    gameData.nama_guru  = namaGuru;
+    gameData.nama_guru = namaGuru;
     gameData.wali_kelas = waliKelas;
-    gameData.kelas      = kelas;
+    gameData.kelas = kelas;
     if (!gameData.judul) gameData.judul = `Game Edukatif - ${safeKeywords.substring(0, 30)}`;
 
     console.log(`[JSON OK] Judul: "${gameData.judul}"`);
@@ -876,11 +876,11 @@ app.post('/api/generate', async (req, res) => {
     const finalHtml = injectDataIntoTemplate(templateContent, gameData, teacherInfo);
 
     // ── [8] Simpan ke folder session ──────────────────────────
-    const safeName    = namaGuru.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
-    const safeClass   = kelas.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
-    const safeKw      = safeKeywords.substring(0, 30).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
-    const timestamp   = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const filename    = `Game_${safeClass}_${safeKw}_${safeName}_${timestamp}.html`;
+    const safeName = namaGuru.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+    const safeClass = kelas.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+    const safeKw = safeKeywords.substring(0, 30).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+    const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const filename = `Game_${safeClass}_${safeKw}_${safeName}_${timestamp}.html`;
 
     const safeSession = (sessionId || 'default').replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 40);
     const dlDir = path.join(DOWNLOADS_DIR, safeSession);
@@ -902,7 +902,7 @@ app.post('/api/generate', async (req, res) => {
         .update({ total_cetak_hari_ini: (penyewa.total_cetak_hari_ini || 0) + 1 })
         .eq('id', penyewa.id)
         .then(() => console.log(`[Counter] ${penyewa.nama_sekolah} +1 cetak hari ini`))
-        .catch(e  => console.warn('[Counter Error]', e.message));
+        .catch(e => console.warn('[Counter Error]', e.message));
     }
 
   } catch (err) {
@@ -949,7 +949,7 @@ app.get('/api/downloads', (req, res) => {
 // ─── DELETE /api/downloads/:session/:filename ─ Hapus File ─
 app.delete('/api/downloads/:session/:filename', (req, res) => {
   try {
-    const session  = req.params.session.replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 40);
+    const session = req.params.session.replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 40);
     const filename = req.params.filename;
     // Cegah path traversal
     if (!session || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
@@ -987,7 +987,7 @@ app.listen(PORT, () => {
     'Groq Key-2': process.env.GROQ_API_KEY_2,
     'Groq Key-3': process.env.GROQ_API_KEY_3,
     'OpenRouter': process.env.OPENROUTER_API_KEY,
-    'Gemini'    : process.env.GEMINI_API_KEY,
+    'Gemini': process.env.GEMINI_API_KEY,
   };
   let found = 0;
   Object.entries(keys).forEach(([name, val]) => {
