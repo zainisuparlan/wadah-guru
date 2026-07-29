@@ -147,17 +147,30 @@
             <label class="input-label" for="kodeLisensi" style="justify-content: center; margin-bottom: 6px;">
               <span class="label-icon">🔑</span> Kode Lisensi Sekolah <span class="required-star">*</span>
             </label>
-            <input
-              type="text"
-              id="kodeLisensi"
-              name="kodeLisensi"
-              class="input-field input-license-compact"
-              placeholder="cth: WG-SMP1MAJU-4729"
-              maxlength="40"
-              required
-              autocomplete="off"
-            >
-            <div class="input-hint" style="text-align: center; margin-top: 4px;">🔐 Kode dari Admin (Tersimpan otomatis di browser)</div>
+            <div style="display: flex; gap: 8px; justify-content: center; align-items: center; max-width: 520px; margin: 0 auto;">
+              <input
+                type="text"
+                id="kodeLisensi"
+                name="kodeLisensi"
+                class="input-field input-license-compact"
+                placeholder="cth: WG-SMP1MAJU-4729"
+                maxlength="40"
+                required
+                autocomplete="off"
+                style="flex: 1; text-align: center; font-weight: 700; letter-spacing: 1px;"
+              >
+              <button
+                type="button"
+                id="btnSimpanLisensi"
+                onclick="simpanKodeLisensiManual()"
+                style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 0.85rem; cursor: pointer; white-space: nowrap; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);"
+                onmouseover="this.style.transform='translateY(-1px)'"
+                onmouseout="this.style.transform='none'"
+              >
+                💾 Simpan Lisensi
+              </button>
+            </div>
+            <div class="input-hint" style="text-align: center; margin-top: 6px;">🔐 Kode dari Admin (Klik "Simpan Lisensi" atau tersimpan otomatis saat cetak)</div>
           </div>
 
           <div class="input-grid">
@@ -626,6 +639,23 @@
         if (el) el.value = savedKode;
       }
     })();
+
+    // ─── Simpan Kode Lisensi Manual ─────────────────────────
+    function simpanKodeLisensiManual() {
+      const input = document.getElementById('kodeLisensi');
+      const val = input ? input.value.trim().toUpperCase() : '';
+      if (!val) {
+        if (input) input.classList.add('input-error');
+        showToast('error', 'Kode Lisensi Kosong', 'Silakan ketikkan Kode Lisensi Sekolah terlebih dahulu.');
+        return;
+      }
+      if (input) {
+        input.value = val;
+        input.classList.remove('input-error');
+      }
+      localStorage.setItem('wg_kode_lisensi', val);
+      showToast('success', 'Lisensi Tersimpan!', `Kode lisensi "${val}" tersimpan di browser Anda.`);
+    }
 
     // ─── Char Counter ───────────────────────────────────────
     keywordsInput.addEventListener('input', () => {

@@ -274,6 +274,14 @@
     else showToast('❌', res.error, true);
   }
 
+  // ── Hapus Sekolah ───────────────────────────────────────
+  async function hapusSekolah(id, nama) {
+    if (!confirm(`Apakah Anda yakin ingin MENGHAPUS lisensi sekolah "${nama}"?`)) return;
+    const res = await callApi({ aksi: 'hapus', id });
+    if (res.sukses) { showToast('🗑️', res.pesan); muatData(); }
+    else showToast('❌', res.error, true);
+  }
+
   // ── Render Tabel ─────────────────────────────────────
   function renderTabel(data) {
     const tbody = document.getElementById('tabelBody');
@@ -334,6 +342,10 @@
             <button onclick="perpanjang(${row.id})"
               class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
               📅 +30 Hari
+            </button>
+            <button onclick="hapusSekolah(${row.id}, '${esc(row.nama_sekolah)}')"
+              class="bg-rose-900/80 hover:bg-rose-700 text-rose-200 text-xs font-bold px-3 py-1.5 rounded-lg transition border border-rose-700/50">
+              🗑️ Hapus
             </button>
           </div>
         </td>

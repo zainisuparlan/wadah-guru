@@ -697,6 +697,20 @@ app.post('/api/admin', async (req, res) => {
       return res.status(200).json({ sukses: true, pesan: 'API Key berhasil diperbarui!' });
     }
 
+    if (aksi === 'hapus') {
+      const { id } = body;
+      if (!id) return res.status(400).json({ error: 'ID penyewa wajib diisi.' });
+
+      const { error } = await supabase
+        .from('penyewa')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, pesan: 'Data lisensi sekolah berhasil dihapus!' });
+    }
+
+
     // ── CRUD Pool Key PRO ──────────────────────────────────────
 
     if (aksi === 'daftar_pool_key') {
