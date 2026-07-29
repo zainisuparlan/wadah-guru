@@ -441,17 +441,34 @@ async function callAI_Tenant(prompt, penyewa) {
 
   // ── A. JALUR TRIAL ────────────────────────────────────────
   if (paket !== 'pro') {
-    const trialKey = (process.env.GROQ_KEY_TRIAL || '').trim();
-    if (trialKey.startsWith('gsk_')) {
+    const rawTrialKeys = [
+      process.env.GROQ_KEY_TRIAL,
+      process.env.GROQ_KEY_TRIAL_2,
+      process.env.GROQ_KEY_TRIAL_3,
+      process.env.GROQ_API_KEY
+    ].filter(Boolean).join(',');
+
+    const trialKeys = rawTrialKeys
+      .split(/[\n,]+/)
+      .map(k => k.trim())
+      .filter(k => k.startsWith('gsk_'));
+
+    for (let i = 0; i < trialKeys.length; i++) {
       try {
-        console.log('[AI] Jalur TRIAL: Groq Trial Key...');
-        const result = await callGroqKey(trialKey, prompt);
-        console.log('[AI OK] Berhasil via Groq Trial');
+        console.log(`[AI TRIAL] Groq Key-${i + 1}/${trialKeys.length} mencoba...`);
+        const result = await callGroqKey(trialKeys[i], prompt);
+        console.log(`[AI OK] Berhasil via Groq Trial Key-${i + 1}`);
         return result;
       } catch (err) {
-        if (err.status === 429) console.warn('[AI] Groq Trial rate-limited, coba Gemini...');
-        else if (err.status === 401) console.warn('[AI] Groq Trial key tidak valid.');
-        else throw err;
+        if (err.status === 429) {
+          console.warn(`[AI TRIAL] Groq Key-${i + 1} rate-limited, coba key berikutnya...`);
+          continue;
+        }
+        if (err.status === 401 || err.status === 403) {
+          console.warn(`[AI TRIAL] Groq Key-${i + 1} tidak valid, skip.`);
+          continue;
+        }
+        console.warn(`[AI TRIAL] Groq Key-${i + 1} error: ${err.message}, coba berikutnya...`);
       }
     }
     // Gemini sebagai fallback trial

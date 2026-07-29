@@ -162,7 +162,7 @@
               <button
                 type="button"
                 id="btnSimpanLisensi"
-                onclick="simpanKodeLisensiManual()"
+                onclick="toggleLisensiState()"
                 style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 0.85rem; cursor: pointer; white-space: nowrap; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);"
                 onmouseover="this.style.transform='translateY(-1px)'"
                 onmouseout="this.style.transform='none'"
@@ -170,7 +170,7 @@
                 💾 Simpan Lisensi
               </button>
             </div>
-            <div class="input-hint" style="text-align: center; margin-top: 6px;">🔐 Kode dari Admin (Klik "Simpan Lisensi" atau tersimpan otomatis saat cetak)</div>
+            <div class="input-hint" id="licenseStatusHint" style="text-align: center; margin-top: 6px;">🔐 Kode dari Admin (Klik "Simpan Lisensi" atau tersimpan otomatis saat cetak)</div>
           </div>
 
           <div class="input-grid">
@@ -428,8 +428,8 @@
     <div class="toast" id="successToast">
       <div class="toast-icon">✅</div>
       <div class="toast-body">
-        <strong>Game berhasil dibuat!</strong>
-        <span>File HTML5 sedang diunduh...</span>
+        <strong id="successTitle">Game berhasil dibuat!</strong>
+        <span id="successMsg">File HTML5 sedang diunduh...</span>
       </div>
     </div>
 
@@ -630,32 +630,71 @@
       return sid;
     })();
 
-    // ─── Auto-load Kode Lisensi dari localStorage ───────────
-    // Guru tidak perlu ketik ulang kode tiap membuka halaman
+    // ─── Manajer Tampilan & Lisensi Sekolah ───────────────────
+    function setLicenseUIState(isSaved, code = '') {
+      const input = document.getElementById('kodeLisensi');
+      const btn = document.getElementById('btnSimpanLisensi');
+      const hint = document.getElementById('licenseStatusHint');
+      if (!input || !btn || !hint) return;
+
+      if (isSaved && code) {
+        input.value = code;
+        input.readOnly = true;
+        input.style.backgroundColor = '#eef2ff';
+        input.style.color = '#312e81';
+        input.style.borderColor = '#6366f1';
+        input.style.boxShadow = '0 0 0 2px rgba(99, 102, 241, 0.2)';
+        
+        btn.innerHTML = '✏️ Ganti Kode';
+        btn.style.background = 'linear-gradient(135deg, #475569, #334155)';
+        btn.style.boxShadow = '0 2px 8px rgba(71, 85, 105, 0.3)';
+
+        hint.innerHTML = `<span style="color: #4f46e5; font-weight: 600;">✅ Lisensi ${code} Terdaftar & Aktif di Browser Ini</span>`;
+      } else {
+        input.readOnly = false;
+        input.style.backgroundColor = '#ffffff';
+        input.style.color = 'inherit';
+        input.style.borderColor = 'inherit';
+        input.style.boxShadow = 'none';
+
+        btn.innerHTML = '💾 Simpan Lisensi';
+        btn.style.background = 'linear-gradient(135deg, #4f46e5, #7c3aed)';
+        btn.style.boxShadow = '0 2px 8px rgba(124, 58, 237, 0.3)';
+
+        hint.innerHTML = '🔐 Kode dari Admin (Klik "Simpan Lisensi" atau tersimpan otomatis saat cetak)';
+        input.focus();
+      }
+    }
+
+    function toggleLisensiState() {
+      const input = document.getElementById('kodeLisensi');
+      if (!input) return;
+
+      if (input.readOnly) {
+        // Mode edit
+        setLicenseUIState(false);
+      } else {
+        // Mode simpan
+        const val = input.value.trim().toUpperCase();
+        if (!val) {
+          input.classList.add('input-error');
+          showToast('error', 'Kode Lisensi Kosong', 'Silakan ketikkan Kode Lisensi Sekolah terlebih dahulu.');
+          return;
+        }
+        input.classList.remove('input-error');
+        localStorage.setItem('wg_kode_lisensi', val);
+        setLicenseUIState(true, val);
+        showToast('success', 'Lisensi Berhasil Disimpan!', `Kode lisensi "${val}" terdaftar & aktif.`);
+      }
+    }
+
+    // Auto-load saat halaman dibuka
     (() => {
       const savedKode = localStorage.getItem('wg_kode_lisensi');
       if (savedKode) {
-        const el = document.getElementById('kodeLisensi');
-        if (el) el.value = savedKode;
+        setLicenseUIState(true, savedKode);
       }
     })();
-
-    // ─── Simpan Kode Lisensi Manual ─────────────────────────
-    function simpanKodeLisensiManual() {
-      const input = document.getElementById('kodeLisensi');
-      const val = input ? input.value.trim().toUpperCase() : '';
-      if (!val) {
-        if (input) input.classList.add('input-error');
-        showToast('error', 'Kode Lisensi Kosong', 'Silakan ketikkan Kode Lisensi Sekolah terlebih dahulu.');
-        return;
-      }
-      if (input) {
-        input.value = val;
-        input.classList.remove('input-error');
-      }
-      localStorage.setItem('wg_kode_lisensi', val);
-      showToast('success', 'Lisensi Tersimpan!', `Kode lisensi "${val}" tersimpan di browser Anda.`);
-    }
 
     // ─── Char Counter ───────────────────────────────────────
     keywordsInput.addEventListener('input', () => {
@@ -831,8 +870,15 @@
       const toastId = type === 'success' ? 'successToast' : 'errorToast';
       const toast = document.getElementById(toastId);
       if (type === 'error') {
-        document.getElementById('errorTitle').textContent = title;
-        document.getElementById('errorMsg').textContent = msg;
+        const tEl = document.getElementById('errorTitle');
+        const mEl = document.getElementById('errorMsg');
+        if (tEl && title) tEl.textContent = title;
+        if (mEl && msg) mEl.textContent = msg;
+      } else if (type === 'success') {
+        const tEl = document.getElementById('successTitle');
+        const mEl = document.getElementById('successMsg');
+        if (tEl && title) tEl.textContent = title;
+        if (mEl && msg) mEl.textContent = msg;
       }
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 5000);
@@ -869,8 +915,9 @@
       animateLoadingSteps();
 
       const kodeInput = document.getElementById('kodeLisensi').value.trim().toUpperCase();
-      // Simpan lisensi ke localStorage agar tidak perlu isi ulang
+      // Simpan lisensi ke localStorage & kunci UI agar rapi
       localStorage.setItem('wg_kode_lisensi', kodeInput);
+      setLicenseUIState(true, kodeInput);
 
       const formData = {
         namaGuru:              document.getElementById('namaGuru').value.trim(),
