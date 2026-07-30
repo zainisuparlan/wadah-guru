@@ -662,31 +662,67 @@
       if (!code || !code.startsWith('WG-FREE-')) {
         const rand = Math.floor(100000 + Math.random() * 900000);
         code = 'WG-FREE-' + rand;
-        localStorage.setItem('wg_device_trial_code', code);
-        document.cookie = `wg_device_trial_code=${encodeURIComponent(code)}; max-age=315360000; path=/; SameSite=Lax`;
       }
+      localStorage.setItem('wg_device_trial_code', code);
+      document.cookie = `wg_device_trial_code=${encodeURIComponent(code)}; max-age=315360000; path=/; SameSite=Lax`;
       return code;
     }
 
-    // ─── Trial Counter Helper (Max 3x/Hari, Reset Tiap 24 Jam) ─
+    // ─── Trial Counter Helper (Max 3x/Hari, Reset Tiap 24 Jam Local) ─
     const MAX_TRIAL_PRINTS = 3;
 
     function getTrialDateKey() {
-      return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`; // Tanggal lokal YYYY-MM-DD
+    }
+
+    function getStoredTrialDate() {
+      let date = localStorage.getItem('wg_trial_date');
+      if (!date) {
+        const match = document.cookie.match(/(?:^|; )wg_trial_date=([^;]*)/);
+        if (match) {
+          try { date = decodeURIComponent(match[1]); } catch(e){}
+        }
+      }
+      return date ? date.trim() : '';
+    }
+
+    function getStoredTrialCountRaw() {
+      let val = localStorage.getItem('wg_trial_prints_count');
+      if (val === null || val === undefined) {
+        const match = document.cookie.match(/(?:^|; )wg_trial_prints_count=([^;]*)/);
+        if (match) {
+          try { val = decodeURIComponent(match[1]); } catch(e){}
+        }
+      }
+      return (val !== null && val !== undefined) ? parseInt(val, 10) : 0;
     }
 
     function getTrialPrintsCount() {
       const today = getTrialDateKey();
-      const storedDate = localStorage.getItem('wg_trial_date') || '';
+      const storedDate = getStoredTrialDate();
+      const currentCount = getStoredTrialCountRaw();
+
+      if (!storedDate) {
+        // Belum ada tanggal tersimpan — catat hari ini, JAGA count yang sudah ada!
+        localStorage.setItem('wg_trial_date', today);
+        document.cookie = `wg_trial_date=${today}; max-age=315360000; path=/; SameSite=Lax`;
+        return isNaN(currentCount) ? 0 : currentCount;
+      }
+
       if (storedDate !== today) {
-        // Hari baru — reset otomatis
+        // Berbeda hari — reset kuota ke 0
         localStorage.setItem('wg_trial_date', today);
         localStorage.setItem('wg_trial_prints_count', '0');
         document.cookie = `wg_trial_date=${today}; max-age=315360000; path=/; SameSite=Lax`;
         document.cookie = `wg_trial_prints_count=0; max-age=315360000; path=/; SameSite=Lax`;
         return 0;
       }
-      return parseInt(localStorage.getItem('wg_trial_prints_count') || '0', 10);
+
+      return isNaN(currentCount) ? 0 : currentCount;
     }
 
     function incrementTrialPrintsCount() {
@@ -1030,6 +1066,7 @@
       if (isPro) {
         kodeInput = savedKode;
       } else {
+        kodeInput = getDeviceTrialCode();
         // Mode Trial — cek kuota
         const used = getTrialPrintsCount();
         if (used >= MAX_TRIAL_PRINTS) {
@@ -1037,7 +1074,6 @@
           setLicenseUIState('trial', kodeInput);
           return;
         }
-        kodeInput = getDeviceTrialCode();
       }
 
       // Show loading
@@ -1063,6 +1099,11 @@
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({ error: 'Gagal membaca respons server' }));
+          if (response.status === 403 || (errData.error && errData.error.includes('Kuota'))) {
+            localStorage.setItem('wg_trial_prints_count', '3');
+            document.cookie = `wg_trial_prints_count=3; max-age=315360000; path=/; SameSite=Lax`;
+            setLicenseUIState('trial', kodeInput);
+          }
           showToast('error', 'Gagal Generate Game', errData.error || 'Silakan coba lagi.');
           return;
         }

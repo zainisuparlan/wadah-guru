@@ -918,16 +918,23 @@ app.post('/api/generate', async (req, res) => {
             .select()
             .single();
           trialData = created;
-          console.log(`[Trial Baru] ${inputCode} terdaftar`);
+          console.log(`[Trial Baru] ${inputCode} terdaftar (Cetak 1/3)`);
         } else {
-          // Perangkat sudah ada — update counter harian
-          const newCount = (trialData.total_cetak_hari_ini || 0) + 1;
+          // Perangkat sudah ada — cek limit cetak 3x
+          const currentCount = trialData.total_cetak_hari_ini || 0;
+          if (currentCount >= 3) {
+            console.log(`[Trial Ditolak DB] ${inputCode} sudah cetak ${currentCount}x`);
+            return res.status(403).json({
+              error: '🔒 Kuota trial gratis hari ini (3/3) sudah habis! Silakan coba lagi besok atau lihat banner INFO KEMITRAAN.'
+            });
+          }
+          const newCount = currentCount + 1;
           await supabase
             .from('penyewa')
             .update({ total_cetak_hari_ini: newCount })
             .eq('kode_lisensi', inputCode);
           trialData.total_cetak_hari_ini = newCount;
-          console.log(`[Trial] ${inputCode} | Total Cetak DB: ${newCount}`);
+          console.log(`[Trial DB] ${inputCode} | Total Cetak: ${newCount}/3`);
         }
 
         penyewa = trialData || { nama_sekolah: `🎁 Trial (${inputCode})`, status_paket: 'trial' };
