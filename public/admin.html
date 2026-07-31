@@ -111,6 +111,20 @@
           class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
           onkeydown="if(event.key==='Enter') tambahSekolah()"
         />
+        <select
+          id="inputMaxPerangkat"
+          class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+          title="Batas Perangkat (Device Lock)"
+        >
+          <option value="1">1 Perangkat</option>
+          <option value="2">2 Perangkat</option>
+          <option value="3">3 Perangkat</option>
+          <option value="4">4 Perangkat</option>
+          <option value="5" selected>5 Perangkat</option>
+          <option value="10">10 Perangkat</option>
+          <option value="20">20 Perangkat</option>
+          <option value="50">50 Perangkat</option>
+        </select>
         <button
           onclick="tambahSekolah()"
           class="bg-violet-600 hover:bg-violet-500 text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 text-sm whitespace-nowrap"
@@ -239,9 +253,10 @@
   // ── Tambah Sekolah ───────────────────────────────────────
   async function tambahSekolah() {
     const nama = document.getElementById('inputNamaSekolah').value.trim();
+    const maxPerangkat = document.getElementById('inputMaxPerangkat').value;
     if (!nama) { showToast('⚠️', 'Nama sekolah harus diisi!', true); return; }
 
-    const res = await callApi({ aksi: 'tambah', nama_sekolah: nama });
+    const res = await callApi({ aksi: 'tambah', nama_sekolah: nama, max_perangkat: maxPerangkat });
     if (res.sukses) {
       showToast('✅', res.pesan);
       document.getElementById('inputNamaSekolah').value = '';
@@ -290,6 +305,26 @@
     else showToast('❌', res.error, true);
   }
 
+  // ── Reset Perangkat Terhubung (Device Lock) ──────────────
+  async function resetPerangkat(id, nama) {
+    if (!confirm(`Reset semua perangkat terdaftar untuk "${nama}"?\n\nGuru yang terhubung sebelumnya harus memasukkan lisensi kembali.`)) return;
+    const res = await callApi({ aksi: 'reset_perangkat', id });
+    if (res.sukses) { showToast('📱', 'Daftar perangkat berhasil di-reset!'); muatData(); }
+    else showToast('❌', res.error, true);
+  }
+
+  // ── Edit Limit Perangkat ──────────────────────────────────
+  async function setMaxPerangkat(id, currentMax) {
+    const input = prompt(`Masukkan jumlah batas perangkat baru untuk sekolah ini:`, currentMax || 5);
+    if (input === null) return;
+    const num = parseInt(input, 10);
+    if (isNaN(num) || num < 1) { showToast('⚠️', 'Jumlah perangkat tidak valid!', true); return; }
+
+    const res = await callApi({ aksi: 'set_max_perangkat', id, max_perangkat: num });
+    if (res.sukses) { showToast('📱', res.pesan); muatData(); }
+    else showToast('❌', res.error, true);
+  }
+
   // ── Render Tabel ─────────────────────────────────────
   function renderTabel(data) {
     const tbody = document.getElementById('tabelBody');
@@ -317,12 +352,22 @@
           ? 'text-amber-400'
           : 'text-emerald-400';
 
-      // Untuk trial: tampilkan total cetak dengan warna berbeda
+      // Untuk trial & PRO: hitung perangkat terhubung
+      let deviceCount = 0;
+      if (row.perangkat_terhubung) {
+        if (Array.isArray(row.perangkat_terhubung)) deviceCount = row.perangkat_terhubung.length;
+        else if (typeof row.perangkat_terhubung === 'string') deviceCount = row.perangkat_terhubung.split(',').map(s=>s.trim()).filter(Boolean).length;
+      }
+      const maxDev = row.max_perangkat || 5;
+
       const cetakDisplay = isTrial
         ? `<span class="text-amber-400 font-bold">${row.total_cetak_hari_ini ?? 0}</span><div class="text-gray-500 text-xs">total cetak</div>`
-        : `<span class="text-gray-300 font-bold">${row.total_cetak_hari_ini ?? 0}</span>`;
+        : `<span class="text-gray-300 font-bold">${row.total_cetak_hari_ini ?? 0}</span>
+           <div class="mt-1 text-xs font-semibold ${deviceCount >= maxDev ? 'text-amber-400' : 'text-emerald-400'}" title="Perangkat HP/Laptop Terhubung">
+             📱 ${deviceCount}/${maxDev} HP
+           </div>`;
 
-      // Tombol aksi — trial punya Reset Kuota & Hapus, PRO tidak
+      // Tombol aksi — trial punya Reset Kuota & Hapus, PRO punya +30 Hari, Limit HP, Reset HP, Hapus
       const aksiTrial = isTrial ? `
         <button onclick="resetKuota(${row.id}, '${esc(row.kode_lisensi)}')"
           class="bg-sky-700 hover:bg-sky-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition" title="Reset jumlah cetak ke 0">
@@ -335,6 +380,14 @@
         <button onclick="perpanjang(${row.id})"
           class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
           📅 +30 Hari
+        </button>
+        <button onclick="setMaxPerangkat(${row.id}, ${maxDev})"
+          class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition" title="Ubah batas jumlah perangkat">
+          📱 Limit HP (${maxDev})
+        </button>
+        <button onclick="resetPerangkat(${row.id}, '${esc(row.nama_sekolah)}')"
+          class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition" title="Reset daftar perangkat terhubung">
+          🔄 Reset HP
         </button>
         <button onclick="hapusSekolah(${row.id}, '${esc(row.nama_sekolah)}')"
           class="bg-rose-900/80 hover:bg-rose-700 text-rose-200 text-xs font-bold px-3 py-1.5 rounded-lg transition border border-rose-700/50">

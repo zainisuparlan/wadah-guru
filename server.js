@@ -651,11 +651,12 @@ app.post('/api/admin', async (req, res) => {
     }
 
     if (aksi === 'tambah') {
-      const { nama_sekolah } = body;
+      const { nama_sekolah, max_perangkat } = body;
       if (!nama_sekolah || !nama_sekolah.trim()) {
         return res.status(400).json({ error: 'Nama sekolah wajib diisi.' });
       }
 
+      const limitPerangkat = parseInt(max_perangkat || 5, 10);
       const kode_lisensi = buatKodeLisensi(nama_sekolah.trim());
       const masa_aktif = tambahHari(7);
 
@@ -666,13 +667,14 @@ app.post('/api/admin', async (req, res) => {
           kode_lisensi,
           status_paket: 'trial',
           masa_aktif,
+          max_perangkat: limitPerangkat,
           total_cetak_hari_ini: 0
         })
         .select()
         .single();
 
       if (error) throw error;
-      return res.status(200).json({ sukses: true, data, pesan: `Lisensi ${kode_lisensi} berhasil dibuat!` });
+      return res.status(200).json({ sukses: true, data, pesan: `Lisensi ${kode_lisensi} berhasil dibuat (Batas ${limitPerangkat} Perangkat)!` });
     }
 
     if (aksi === 'set_status') {
@@ -759,6 +761,33 @@ app.post('/api/admin', async (req, res) => {
 
       if (error) throw error;
       return res.status(200).json({ sukses: true, pesan: 'Kuota cetak berhasil direset ke 0!' });
+    }
+
+    if (aksi === 'set_max_perangkat') {
+      const { id, max_perangkat } = body;
+      if (!id) return res.status(400).json({ error: 'ID penyewa wajib diisi.' });
+      const limitPerangkat = parseInt(max_perangkat || 5, 10);
+
+      const { error } = await supabase
+        .from('penyewa')
+        .update({ max_perangkat: limitPerangkat })
+        .eq('id', id);
+
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, pesan: `Batas perangkat diubah ke ${limitPerangkat} Perangkat.` });
+    }
+
+    if (aksi === 'reset_perangkat') {
+      const { id } = body;
+      if (!id) return res.status(400).json({ error: 'ID penyewa wajib diisi.' });
+
+      const { error } = await supabase
+        .from('penyewa')
+        .update({ perangkat_terhubung: '' })
+        .eq('id', id);
+
+      if (error) throw error;
+      return res.status(200).json({ sukses: true, pesan: 'Daftar perangkat terhubung berhasil di-reset!' });
     }
 
 
@@ -855,7 +884,7 @@ Hasil Rangkaian Kata Kunci AI:`;
 app.post('/api/generate', async (req, res) => {
   try {
     const {
-      namaGuru, waliKelas, kelas, templateKey, keywords, sessionId,
+      namaGuru, waliKelas, kelas, templateKey, keywords, sessionId, deviceId,
       kode_lisensi_sekolah
     } = req.body;
 
@@ -962,8 +991,44 @@ app.post('/api/generate', async (req, res) => {
           });
         }
 
+        // ── Cek Batasan Kuota Perangkat (Device-Lock) ─────────
+        const currentDev = String(deviceId || sessionId || 'DEV-UNKNOWN').trim();
+        const maxPerangkat = parseInt(data.max_perangkat || 5, 10);
+        let listPerangkat = [];
+        
+        if (data.perangkat_terhubung) {
+          if (Array.isArray(data.perangkat_terhubung)) {
+            listPerangkat = data.perangkat_terhubung.map(d => String(d).trim()).filter(Boolean);
+          } else if (typeof data.perangkat_terhubung === 'string') {
+            listPerangkat = data.perangkat_terhubung.split(',').map(d => d.trim()).filter(Boolean);
+          }
+        }
+
+        const isRegistered = listPerangkat.includes(currentDev);
+
+        if (!isRegistered) {
+          if (listPerangkat.length >= maxPerangkat) {
+            console.log(`[PRO Device Lock Ditolak] ${inputCode} | Device: ${currentDev} | HP: ${listPerangkat.length}/${maxPerangkat}`);
+            return res.status(403).json({
+              error: `🔒 Lisensi ${inputCode} telah mencapai batas maksimum (${listPerangkat.length}/${maxPerangkat}) perangkat terdaftar! Hubungi Admin Wadah Guru jika ingin menambah alokasi perangkat.`
+            });
+          }
+
+          // Daftarkan perangkat baru ini secara otomatis
+          listPerangkat.push(currentDev);
+          const updatedStr = listPerangkat.join(',');
+          
+          await supabase
+            .from('penyewa')
+            .update({ perangkat_terhubung: updatedStr })
+            .eq('id', data.id);
+            
+          data.perangkat_terhubung = updatedStr;
+          console.log(`[PRO Perangkat Baru Terdaftar] ${inputCode} | Registered Device ${currentDev} (${listPerangkat.length}/${maxPerangkat})`);
+        }
+
         penyewa = data;
-        console.log(`[Lisensi OK] ${data.nama_sekolah} | Paket: ${data.status_paket}`);
+        console.log(`[Lisensi OK] ${data.nama_sekolah} | Paket: ${data.status_paket} | Perangkat: ${listPerangkat.length}/${maxPerangkat}`);
       }
     } else {
       // Supabase belum dikonfigurasi — mode development bebas lisensi
