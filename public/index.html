@@ -91,14 +91,22 @@
             terpisah dari kuota umum. Mari gunakan teknologi ini secara bijak demi efisiensi dan kenyamanan bersama. 🖥️✨
           </p>
           <div class="wg-btn-center-wrap">
-            <a
-              href="https://t.me/netstreamcloud_bot?text=Halo%20Admin%20Wadah%20Guru%2C%20sekolah%20kami%20tertarik%20untuk%20bergabung%20dalam%20program%20Mitra%20Mandiri%20%28Sponsorship%29%20agar%20mendapatkan%20alokasi%20kuota%20yang%20lebih%20besar.%20Mohon%20informasi%20langkah%20aktivasi%20dan%20pendaftaran%20lisensinya.%20Terima%20kasih."
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
               class="wg-btn-mitra"
+              onclick="(function(){
+                var msg = encodeURIComponent('Halo Admin Wadah Guru, sekolah kami tertarik untuk bergabung dalam program Mitra Mandiri (Sponsorship) agar mendapatkan alokasi kuota yang lebih besar. Mohon informasi langkah aktivasi dan pendaftaran lisensinya. Terima kasih.');
+                var tgApp = 'tg://resolve?domain=netstreamcloud_bot&text=' + msg;
+                var tgWeb = 'https://t.me/netstreamcloud_bot?text=' + msg;
+                var win = window.open(tgApp, '_blank');
+                setTimeout(function(){
+                  if (!win || win.closed || typeof win.closed === 'undefined') {
+                    window.open(tgWeb, '_blank');
+                  }
+                }, 1500);
+              })()"
             >
               🚀 Gabung Program Mitra Mandiri
-            </a>
+            </button>
           </div>
         </div>
       </div>
