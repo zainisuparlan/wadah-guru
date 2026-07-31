@@ -602,6 +602,49 @@ async function callAI(prompt) {
   throw new Error('Tidak ada AI tersedia untuk merangkai kata kunci. Pastikan GROQ_KEY_TRIAL terisi di Vercel.');
 }
 
+// ─── Helper: Device Lock Metadata (Schema-Safe dengan Supabase Fallback) ─
+function getDeviceMeta(row) {
+  let max = parseInt(row.max_perangkat || 5, 10);
+  let devices = [];
+  if (row.perangkat_terhubung) {
+    if (Array.isArray(row.perangkat_terhubung)) devices = row.perangkat_terhubung.map(d=>String(d).trim()).filter(Boolean);
+    else if (typeof row.perangkat_terhubung === 'string') devices = row.perangkat_terhubung.split(',').map(s=>s.trim()).filter(Boolean);
+  }
+  if (row.openrouter_key) {
+    try {
+      const parsed = JSON.parse(row.openrouter_key);
+      if (parsed && typeof parsed === 'object') {
+        if (parsed.max !== undefined) max = parseInt(parsed.max, 10) || max;
+        if (Array.isArray(parsed.devices)) devices = parsed.devices;
+      }
+    } catch(e) {}
+  }
+  return { max, devices };
+}
+
+async function updatePenyewaDeviceMeta(supabase, row, { newMax, newDevices }) {
+  const currentMeta = getDeviceMeta(row);
+  if (newMax !== undefined) currentMeta.max = parseInt(newMax, 10) || 5;
+  if (newDevices !== undefined) currentMeta.devices = newDevices;
+
+  const devicesStr = currentMeta.devices.join(',');
+
+  // Coba update ke kolom max_perangkat & perangkat_terhubung
+  const { error: err1 } = await supabase
+    .from('penyewa')
+    .update({ max_perangkat: currentMeta.max, perangkat_terhubung: devicesStr })
+    .eq('id', row.id);
+
+  if (err1) {
+    // Schema cache Supabase belum punya kolom max_perangkat -> Simpan ke openrouter_key sebagai JSON fallback
+    await supabase
+      .from('penyewa')
+      .update({ openrouter_key: JSON.stringify(currentMeta) })
+      .eq('id', row.id);
+  }
+  return currentMeta;
+}
+
 // ─── Helper: Buat Kode Lisensi Unik & Tanggal ──────────────
 function buatKodeLisensi(namaSekolah) {
   const bersih = namaSekolah
@@ -660,21 +703,24 @@ app.post('/api/admin', async (req, res) => {
       const kode_lisensi = buatKodeLisensi(nama_sekolah.trim());
       const masa_aktif = tambahHari(7);
 
-      const { data, error } = await supabase
+      const { data: created, error } = await supabase
         .from('penyewa')
         .insert({
           nama_sekolah: nama_sekolah.trim(),
           kode_lisensi,
           status_paket: 'trial',
           masa_aktif,
-          max_perangkat: limitPerangkat,
           total_cetak_hari_ini: 0
         })
         .select()
         .single();
 
       if (error) throw error;
-      return res.status(200).json({ sukses: true, data, pesan: `Lisensi ${kode_lisensi} berhasil dibuat (Batas ${limitPerangkat} Perangkat)!` });
+
+      // Simpan device lock metadata secara aman
+      await updatePenyewaDeviceMeta(supabase, created, { newMax: limitPerangkat, newDevices: [] });
+
+      return res.status(200).json({ sukses: true, data: created, pesan: `Lisensi ${kode_lisensi} berhasil dibuat (Batas ${limitPerangkat} Perangkat)!` });
     }
 
     if (aksi === 'set_status') {
@@ -768,12 +814,15 @@ app.post('/api/admin', async (req, res) => {
       if (!id) return res.status(400).json({ error: 'ID penyewa wajib diisi.' });
       const limitPerangkat = parseInt(max_perangkat || 5, 10);
 
-      const { error } = await supabase
+      const { data: row, error: fetchErr } = await supabase
         .from('penyewa')
-        .update({ max_perangkat: limitPerangkat })
-        .eq('id', id);
+        .select('*')
+        .eq('id', id)
+        .single();
 
-      if (error) throw error;
+      if (fetchErr || !row) return res.status(404).json({ error: 'Data penyewa tidak ditemukan.' });
+
+      await updatePenyewaDeviceMeta(supabase, row, { newMax: limitPerangkat });
       return res.status(200).json({ sukses: true, pesan: `Batas perangkat diubah ke ${limitPerangkat} Perangkat.` });
     }
 
@@ -781,12 +830,15 @@ app.post('/api/admin', async (req, res) => {
       const { id } = body;
       if (!id) return res.status(400).json({ error: 'ID penyewa wajib diisi.' });
 
-      const { error } = await supabase
+      const { data: row, error: fetchErr } = await supabase
         .from('penyewa')
-        .update({ perangkat_terhubung: '' })
-        .eq('id', id);
+        .select('*')
+        .eq('id', id)
+        .single();
 
-      if (error) throw error;
+      if (fetchErr || !row) return res.status(404).json({ error: 'Data penyewa tidak ditemukan.' });
+
+      await updatePenyewaDeviceMeta(supabase, row, { newDevices: [] });
       return res.status(200).json({ sukses: true, pesan: 'Daftar perangkat terhubung berhasil di-reset!' });
     }
 
@@ -993,16 +1045,9 @@ app.post('/api/generate', async (req, res) => {
 
         // ── Cek Batasan Kuota Perangkat (Device-Lock) ─────────
         const currentDev = String(deviceId || sessionId || 'DEV-UNKNOWN').trim();
-        const maxPerangkat = parseInt(data.max_perangkat || 5, 10);
-        let listPerangkat = [];
-        
-        if (data.perangkat_terhubung) {
-          if (Array.isArray(data.perangkat_terhubung)) {
-            listPerangkat = data.perangkat_terhubung.map(d => String(d).trim()).filter(Boolean);
-          } else if (typeof data.perangkat_terhubung === 'string') {
-            listPerangkat = data.perangkat_terhubung.split(',').map(d => d.trim()).filter(Boolean);
-          }
-        }
+        const devMeta = getDeviceMeta(data);
+        const maxPerangkat = devMeta.max;
+        let listPerangkat = devMeta.devices;
 
         const isRegistered = listPerangkat.includes(currentDev);
 
@@ -1016,14 +1061,7 @@ app.post('/api/generate', async (req, res) => {
 
           // Daftarkan perangkat baru ini secara otomatis
           listPerangkat.push(currentDev);
-          const updatedStr = listPerangkat.join(',');
-          
-          await supabase
-            .from('penyewa')
-            .update({ perangkat_terhubung: updatedStr })
-            .eq('id', data.id);
-            
-          data.perangkat_terhubung = updatedStr;
+          await updatePenyewaDeviceMeta(supabase, data, { newDevices: listPerangkat });
           console.log(`[PRO Perangkat Baru Terdaftar] ${inputCode} | Registered Device ${currentDev} (${listPerangkat.length}/${maxPerangkat})`);
         }
 

@@ -325,6 +325,26 @@
     else showToast('❌', res.error, true);
   }
 
+  // ── Helper Meta Perangkat ────────────────────────────────
+  function getDeviceMeta(row) {
+    let max = parseInt(row.max_perangkat || 5, 10);
+    let devices = [];
+    if (row.perangkat_terhubung) {
+      if (Array.isArray(row.perangkat_terhubung)) devices = row.perangkat_terhubung.map(s=>String(s).trim()).filter(Boolean);
+      else if (typeof row.perangkat_terhubung === 'string') devices = row.perangkat_terhubung.split(',').map(s=>s.trim()).filter(Boolean);
+    }
+    if (row.openrouter_key) {
+      try {
+        const parsed = JSON.parse(row.openrouter_key);
+        if (parsed && typeof parsed === 'object') {
+          if (parsed.max !== undefined) max = parseInt(parsed.max, 10) || max;
+          if (Array.isArray(parsed.devices)) devices = parsed.devices;
+        }
+      } catch(e) {}
+    }
+    return { max, devices };
+  }
+
   // ── Render Tabel ─────────────────────────────────────
   function renderTabel(data) {
     const tbody = document.getElementById('tabelBody');
@@ -353,12 +373,9 @@
           : 'text-emerald-400';
 
       // Untuk trial & PRO: hitung perangkat terhubung
-      let deviceCount = 0;
-      if (row.perangkat_terhubung) {
-        if (Array.isArray(row.perangkat_terhubung)) deviceCount = row.perangkat_terhubung.length;
-        else if (typeof row.perangkat_terhubung === 'string') deviceCount = row.perangkat_terhubung.split(',').map(s=>s.trim()).filter(Boolean).length;
-      }
-      const maxDev = row.max_perangkat || 5;
+      const devMeta = getDeviceMeta(row);
+      const deviceCount = devMeta.devices.length;
+      const maxDev = devMeta.max;
 
       const cetakDisplay = isTrial
         ? `<span class="text-amber-400 font-bold">${row.total_cetak_hari_ini ?? 0}</span><div class="text-gray-500 text-xs">total cetak</div>`
